@@ -8,10 +8,24 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 
-let players = {}; // store all players
+let players = {};
+let bullets = [];
+let crates = [];
+
+function spawnCrate(){
+  crates.push({
+    id: Date.now(),
+    x: Math.random() * 1200,
+    y: Math.random() * 800,
+    size: 20,
+  });
+}
+
+// spawn crate every 15 seconds
+setInterval(spawnCrate, 15000);
 
 io.on('connection', socket => {
-  console.log('Player connected: ', socket.id);
+  console.log('Player connected:', socket.id);
 
   // Add player
   players[socket.id] = {
@@ -20,16 +34,17 @@ io.on('connection', socket => {
     y: Math.random() * 800,
     size: 30,
     health: 100,
-    coins: 0
+    coins: 0,
+    fireRate: 500 // ms between shots
   };
 
-  // Send new player their info
+  // Send all current data
   socket.emit('currentPlayers', players);
+  socket.emit('currentCrates', crates);
 
-  // Notify others
   socket.broadcast.emit('newPlayer', players[socket.id]);
 
-  // Player movement update
+  // Player movement
   socket.on('playerMove', data => {
     if(players[socket.id]){
       players[socket.id].x = data.x;
@@ -38,7 +53,13 @@ io.on('connection', socket => {
     }
   });
 
-  // Player shooting hits another player
+  // Player shooting bullet
+  socket.on('shootBullet', bullet => {
+    bullets.push(bullet); // bullet: {x, y, vx, vy, ownerId}
+    io.emit('newBullet', bullet);
+  });
+
+  // Player hit another player
   socket.on('playerHit', ({ victimId, damage }) => {
     const victim = players[victimId];
     const attacker = players[socket.id];
@@ -47,7 +68,7 @@ io.on('connection', socket => {
     victim.health -= damage;
 
     if(victim.health <= 0){
-      attacker.coins += 5; // reward killer
+      attacker.coins += 5;
       victim.health = 100;
       victim.x = Math.random() * 1200;
       victim.y = Math.random() * 800;
@@ -57,12 +78,21 @@ io.on('connection', socket => {
     }
   });
 
+  // Crate collected
+  socket.on('collectCrate', crateId => {
+    const crateIndex = crates.findIndex(c => c.id === crateId);
+    if(crateIndex !== -1){
+      players[socket.id].fireRate = Math.max(100, players[socket.id].fireRate - 50);
+      crates.splice(crateIndex, 1);
+      io.emit('updateCrates', crates);
+    }
+  });
+
   socket.on('disconnect', () => {
-    console.log('Player disconnected: ', socket.id);
+    console.log('Player disconnected:', socket.id);
     delete players[socket.id];
     io.emit('playerDisconnected', socket.id);
   });
 });
 
 http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
