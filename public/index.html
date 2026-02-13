@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Mini Multiplayer Shooter</title>
+  <meta charset="UTF-8">
+  <title>Rise of Ikons Multiplayer</title>
   <style>
-    body { margin: 0; background: #000; color: white; text-align: center; }
-    canvas { background: #111; display: block; margin: auto; }
+    body { margin: 0; overflow: hidden; background: #111; color: #fff; font-family: Arial; }
+    canvas { background: #222; display: block; margin: 0 auto; }
+    #shopBtn {
+      position: absolute; top: 10px; right: 10px;
+      padding: 10px 20px; font-size: 16px;
+      background: gold; border: none; cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <canvas id="gameCanvas"></canvas>
+  <button id="shopBtn">Shop</button>
 
-<h2>Mini Shooter</h2>
-<input id="name" placeholder="Enter name">
-<button onclick="joinGame()">Join</button>
-
-<canvas id="game" width="800" height="600"></canvas>
-
-<script src="/socket.io/socket.io.js"></script>
-<script src="game.js"></script> <!-- IMPORTANT -->
-
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
