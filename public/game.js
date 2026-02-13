@@ -88,10 +88,10 @@ function handleInput(){
     socket.emit('playerMove', {x:player.x, y:player.y});
   }
 
-  // Shooting example: Spacebar shoots upwards bullet
+  // Shooting example: Spacebar sends hit to server
   if(keys[' ']){
-    // Detect hits server-side in your PvP logic
-    // Example: send bullet hit events to server
+    // For simplicity, you can later detect hits with ray or rectangles and send:
+    // socket.emit('playerHit', { victimId: targetId, damage: 10 });
   }
 }
 
@@ -105,4 +105,3 @@ function drawCoins(){
   ctx.font="25px Arial";
   ctx.fillText("Coins: "+player.coins, 20, 40);
 }
-
