@@ -1,74 +1,108 @@
+// ===== game.js =====
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 1200;
+canvas.height = 800;
+
 const socket = io();
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
 
-let players = {};
-let bullets = [];
-let me = null;
+// ===== Player Data =====
+let player = { id: '', x:0, y:0, size:30, health:100, coins:0 };
+const otherPlayers = {}; // id -> player
+const bullets = [];
+
+// Input
 const keys = {};
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
 
-function joinGame() {
-  const name = document.getElementById("name").value || "Player";
-  socket.emit("join", name);
-}
-
-socket.on("state", (data) => {
-  players = data.players;
-  bullets = data.bullets;
-  me = players[socket.id];
+// Shop
+const shopBtn = document.getElementById('shopBtn');
+shopBtn.addEventListener('click', () => {
+  if(player.coins >= 10){
+    player.coins -= 10;
+    alert("Fire rate upgraded!");
+  } else {
+    alert("Not enough coins!");
+  }
 });
 
-document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-
-canvas.addEventListener("click", (e) => {
-  if (!me) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-
-  const dx = mx - me.x;
-  const dy = my - me.y;
-  const len = Math.hypot(dx, dy);
-
-  socket.emit("shoot", {
-    x: me.x,
-    y: me.y,
-    dx: dx / len,
-    dy: dy / len,
-  });
+// ===== Socket Events =====
+socket.on('currentPlayers', players => {
+  for(let id in players){
+    if(id === socket.id){
+      player = players[id];
+    } else {
+      otherPlayers[id] = players[id];
+    }
+  }
 });
 
-function update() {
-  if (me) {
-    if (keys["w"]) me.y -= 4;
-    if (keys["s"]) me.y += 4;
-    if (keys["a"]) me.x -= 4;
-    if (keys["d"]) me.x += 4;
+socket.on('newPlayer', p => {
+  otherPlayers[p.id] = p;
+});
 
-    socket.emit("move", me);
+socket.on('playerMoved', p => {
+  if(otherPlayers[p.id]) otherPlayers[p.id] = p;
+});
+
+socket.on('playerDisconnected', id => {
+  delete otherPlayers[id];
+});
+
+socket.on('playerRespawn', data => {
+  if(otherPlayers[data.id]){
+    otherPlayers[data.id].x = data.x;
+    otherPlayers[data.id].y = data.y;
+    otherPlayers[data.id].health = 100;
   }
+});
 
-  draw();
-  requestAnimationFrame(update);
+socket.on('updateCoins', coins => {
+  player.coins = coins;
+});
+
+// ===== Game Loop =====
+function gameLoop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  handleInput();
+  drawPlayer(player, 'cyan');
+  for(let id in otherPlayers){
+    drawPlayer(otherPlayers[id], 'red');
+  }
+  drawCoins();
+  requestAnimationFrame(gameLoop);
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+requestAnimationFrame(gameLoop);
 
-  for (let id in players) {
-    const p = players[id];
-    ctx.fillStyle = id === socket.id ? "lime" : "red";
-    ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
+// ===== Functions =====
+function handleInput(){
+  let moved = false;
+  if(keys['w'] || keys['ArrowUp']) { player.y -= 5; moved=true; }
+  if(keys['s'] || keys['ArrowDown']) { player.y += 5; moved=true; }
+  if(keys['a'] || keys['ArrowLeft']) { player.x -= 5; moved=true; }
+  if(keys['d'] || keys['ArrowRight']) { player.x += 5; moved=true; }
 
-    ctx.fillStyle = "white";
-    ctx.fillText(`${p.name} (${p.hp})`, p.x - 20, p.y - 15);
+  if(moved){
+    socket.emit('playerMove', {x:player.x, y:player.y});
   }
 
-  ctx.fillStyle = "yellow";
-  bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
+  // Shooting example: Spacebar shoots upwards bullet
+  if(keys[' ']){
+    // Detect hits server-side in your PvP logic
+    // Example: send bullet hit events to server
+  }
 }
 
-update();
+function drawPlayer(p, color){
+  ctx.fillStyle = color;
+  ctx.fillRect(p.x, p.y, p.size, p.size);
+}
+
+function drawCoins(){
+  ctx.fillStyle="gold";
+  ctx.font="25px Arial";
+  ctx.fillText("Coins: "+player.coins, 20, 40);
+}
 
