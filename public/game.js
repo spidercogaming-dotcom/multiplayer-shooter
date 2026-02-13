@@ -67,34 +67,34 @@ function handleInput(){
   if(keys['d']||keys['ArrowRight']){ player.x +=5; moved=true; }
 
   if(moved) socket.emit('playerMove',{x:player.x, y:player.y});
-
-  // Mouse aiming bullets
-  if(keys[' ']){ // spacebar
-    shootBullet(player.x+player.size/2, player.y+player.size/2, canvas.width/2, 0); // example
-  }
 }
 
-canvas.addEventListener('mousedown', e=>{
-  const now = Date.now();
-  if(now - lastShot > player.fireRate){
-    lastShot = now;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const dx = mx - (player.x + player.size/2);
-    const dy = my - (player.y + player.size/2);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const vx = dx/dist*10;
-    const vy = dy/dist*10;
-    const bullet = { x: player.x + player.size/2, y: player.y + player.size/2, vx, vy, ownerId: player.id };
-    bullets.push(bullet);
-    socket.emit('shootBullet', bullet);
-  }
+// ===== Mouse Shooting =====
+canvas.addEventListener('mousedown', e => {
+    const now = Date.now();
+    if(now - lastShot > player.fireRate){
+        lastShot = now;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Convert mouse to world coordinates
+        const camX = player.x - canvas.width/2 + player.size/2;
+        const camY = player.y - canvas.height/2 + player.size/2;
+        const targetX = mouseX + camX;
+        const targetY = mouseY + camY;
+
+        const dx = targetX - (player.x + player.size/2);
+        const dy = targetY - (player.y + player.size/2);
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const vx = dx/dist * 10;
+        const vy = dy/dist * 10;
+
+        const bullet = { x: player.x + player.size/2, y: player.y + player.size/2, vx, vy, ownerId: player.id };
+        bullets.push(bullet);
+        socket.emit('shootBullet', bullet);
+    }
 });
-
-function shootBullet(x, y, tx, ty){
-  // For future use if needed
-}
 
 // ===== Bullets =====
 function updateBullets(){
@@ -182,3 +182,4 @@ function drawMinimap(){
     ctx.fillRect(10 + p.x*scale -2,10 + p.y*scale -2,4,4);
   }
 }
+
