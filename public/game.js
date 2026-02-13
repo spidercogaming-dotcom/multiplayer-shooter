@@ -1,7 +1,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 1200;
+canvas.width = 1200; // view size
 canvas.height = 800;
+
+const mapWidth = 2000;
+const mapHeight = 1500;
 
 const socket = io();
 
@@ -18,9 +21,11 @@ let lastShot = 0;
 
 // Shop
 const shopBtn = document.getElementById('shopBtn');
+shopBtn.textContent = "Shop (10 coins)";
 shopBtn.addEventListener('click', () => {
   if(player.coins >= 10){
     player.coins -= 10;
+    player.fireRate = Math.max(100, player.fireRate - 50);
     alert("Fire rate upgraded!");
   } else alert("Not enough coins!");
 });
@@ -60,24 +65,17 @@ function handleInput(){
   if(keys['s']||keys['ArrowDown']){ player.y +=5; moved=true; }
   if(keys['a']||keys['ArrowLeft']){ player.x -=5; moved=true; }
   if(keys['d']||keys['ArrowRight']){ player.x +=5; moved=true; }
-  
+
   if(moved) socket.emit('playerMove',{x:player.x, y:player.y});
 
   // Mouse aiming bullets
   if(keys[' ']){ // spacebar
-    let now = Date.now();
-    if(now - lastShot > player.fireRate){
-      lastShot = now;
-      // Shoot bullet straight upwards for now (can change to mouse coordinates)
-      let bullet = { x: player.x + player.size/2, y: player.y + player.size/2, vx: 0, vy: -10, ownerId: player.id };
-      bullets.push(bullet);
-      socket.emit('shootBullet', bullet);
-    }
+    shootBullet(player.x+player.size/2, player.y+player.size/2, canvas.width/2, 0); // example
   }
 }
 
 canvas.addEventListener('mousedown', e=>{
-  let now = Date.now();
+  const now = Date.now();
   if(now - lastShot > player.fireRate){
     lastShot = now;
     const rect = canvas.getBoundingClientRect();
@@ -94,15 +92,18 @@ canvas.addEventListener('mousedown', e=>{
   }
 });
 
+function shootBullet(x, y, tx, ty){
+  // For future use if needed
+}
+
+// ===== Bullets =====
 function updateBullets(){
   for(let i=bullets.length-1; i>=0; i--){
     let b = bullets[i];
     b.x += b.vx;
     b.y += b.vy;
-    // Remove offscreen bullets
-    if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height){ bullets.splice(i,1); continue; }
+    if(b.x<0||b.x>mapWidth||b.y<0||b.y>mapHeight){ bullets.splice(i,1); continue; }
 
-    // Hit other players
     for(let id in otherPlayers){
       let p = otherPlayers[id];
       if(b.ownerId!==id && b.x>p.x && b.x<p.x+p.size && b.y>p.y && b.y<p.y+p.size){
@@ -114,25 +115,39 @@ function updateBullets(){
   }
 }
 
+// ===== Draw Game =====
 function drawGame(){
-  drawPlayer(player,'cyan');
-  for(let id in otherPlayers) drawPlayer(otherPlayers[id],'red');
+  const camX = player.x - canvas.width/2 + player.size/2;
+  const camY = player.y - canvas.height/2 + player.size/2;
+
+  // Draw players
+  drawPlayer(player,'cyan',camX,camY);
+  for(let id in otherPlayers) drawPlayer(otherPlayers[id],'red',camX,camY);
+
+  // Bullets
   for(let b of bullets){
     ctx.fillStyle='yellow';
-    ctx.fillRect(b.x-3,b.y-3,6,6);
+    ctx.fillRect(b.x - camX - 3, b.y - camY -3, 6,6);
   }
+
+  // Crates
   for(let c of crates){
     ctx.fillStyle='green';
-    ctx.fillRect(c.x,c.y,c.size,c.size);
+    ctx.fillRect(c.x - camX, c.y - camY, c.size, c.size);
   }
+
+  // Coins & health
   drawCoins();
-  drawHealthBar(player,player.x,player.y-10);
+  drawHealthBar(player, canvas.width/2 - player.size/2, canvas.height/2 - 10);
+
+  // Mini-map
+  drawMinimap();
 }
 
-function drawPlayer(p,color){
+function drawPlayer(p,color,camX,camY){
   ctx.fillStyle=color;
-  ctx.fillRect(p.x,p.y,p.size,p.size);
-  drawHealthBar(p,p.x,p.y-10);
+  ctx.fillRect(p.x - camX, p.y - camY, p.size, p.size);
+  drawHealthBar(p,p.x - camX,p.y - camY -10);
 }
 
 function drawHealthBar(p,x,y){
@@ -146,4 +161,24 @@ function drawCoins(){
   ctx.fillStyle="gold";
   ctx.font="25px Arial";
   ctx.fillText("Coins: "+player.coins,20,40);
+}
+
+// ===== Mini-map =====
+function drawMinimap(){
+  const scale = 0.1;
+  const mmWidth = mapWidth*scale;
+  const mmHeight = mapHeight*scale;
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(10,10, mmWidth, mmHeight);
+
+  // player
+  ctx.fillStyle='cyan';
+  ctx.fillRect(10 + player.x*scale -2,10 + player.y*scale -2,4,4);
+
+  // other players
+  for(let id in otherPlayers){
+    const p = otherPlayers[id];
+    ctx.fillStyle='red';
+    ctx.fillRect(10 + p.x*scale -2,10 + p.y*scale -2,4,4);
+  }
 }
