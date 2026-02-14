@@ -1,4 +1,6 @@
-const socket = io();
+const socket = io({
+    transports: ["websocket"]
+});
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -17,8 +19,14 @@ socket.on("connect", () => {
 });
 
 socket.on("state", (data) => {
-    players = data.players;
-    bullets = data.bullets;
+
+    players = data.players || {};
+
+    if (Array.isArray(data.bullets)) {
+        bullets = data.bullets;
+    } else {
+        bullets = [];
+    }
 
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
@@ -58,6 +66,7 @@ function update() {
 
     socket.emit("move", { x: p.x, y: p.y });
 
+    // Smooth camera
     camera.x += ((p.x - canvas.width/2) - camera.x) * 0.1;
     camera.y += ((p.y - canvas.height/2) - camera.y) * 0.1;
 }
@@ -98,8 +107,9 @@ function gameLoop() {
 
 gameLoop();
 
-
-// SHOP SYSTEM
+/* =========================
+   SHOP + CRATE SYSTEM
+========================= */
 
 document.getElementById("shopBtn").onclick = () => {
     document.getElementById("shop").style.display = "block";
