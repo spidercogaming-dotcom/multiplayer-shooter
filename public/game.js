@@ -25,12 +25,12 @@ socket.on("state", (data) => {
     }
 });
 
-/* MOVEMENT INPUT */
+/* ================= MOVEMENT ================= */
+
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-/* SHOOT ONLY ON CANVAS */
 canvas.addEventListener("click", (e) => {
     if (!players[myId]) return;
 
@@ -42,7 +42,8 @@ canvas.addEventListener("click", (e) => {
     socket.emit("shoot", angle);
 });
 
-/* SHOP */
+/* ================= SHOP ================= */
+
 document.getElementById("shopBtn").onclick = () => {
     document.getElementById("shop").style.display = "block";
 };
@@ -51,8 +52,69 @@ function closeShop() {
     document.getElementById("shop").style.display = "none";
 }
 
-/* UPDATE */
+function buyCrate(type) {
+
+    if (!players[myId]) return;
+
+    let cost = 0;
+
+    if (type === "epic") cost = 10;
+    if (type === "rare") cost = 100;
+    if (type === "special") cost = 500;
+
+    if (players[myId].coins < cost) {
+        alert("Not enough coins!");
+        return;
+    }
+
+    socket.emit("addCoins", -cost);
+
+    const weapon = rollWeapon(type);
+
+    socket.emit("setWeapon", weapon);
+
+    alert("You got: " + weapon);
+
+    closeShop();
+}
+
+function rollWeapon(type) {
+
+    const roll = Math.random() * 100;
+
+    if (type === "epic") {
+        if (roll < 65) return randomCommon();
+        if (roll < 80) return randomRare();
+        return "Testi";
+    }
+
+    if (type === "rare") {
+        if (roll < 60) return randomCommon();
+        if (roll < 90) return randomRare();
+        return "Testi";
+    }
+
+    if (type === "special") {
+        if (roll < 59) return randomCommon();
+        if (roll < 90) return randomRare();
+        return "Testi";
+    }
+}
+
+function randomCommon() {
+    const weapons = ["Flawless","Cramp","FIT"];
+    return weapons[Math.floor(Math.random() * weapons.length)];
+}
+
+function randomRare() {
+    const weapons = ["Lamp","Krampus","Grip"];
+    return weapons[Math.floor(Math.random() * weapons.length)];
+}
+
+/* ================= UPDATE ================= */
+
 function update() {
+
     if (!players[myId]) return;
 
     let vx = 0;
@@ -71,8 +133,10 @@ function update() {
     camera.y += ((p.y - canvas.height/2) - camera.y) * 0.1;
 }
 
-/* DRAW */
+/* ================= DRAW ================= */
+
 function draw() {
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     ctx.save();
@@ -99,7 +163,6 @@ function draw() {
     drawMiniMap();
 }
 
-/* MINIMAP */
 function drawMiniMap() {
     const size = 150;
     const mapSize = 2000;
