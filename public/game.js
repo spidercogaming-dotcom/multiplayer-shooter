@@ -25,6 +25,7 @@ socket.on("state", (data) => {
     }
 });
 
+/* MOVEMENT INPUT */
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
@@ -33,7 +34,7 @@ document.addEventListener("keyup", e => keys[e.key] = false);
 canvas.addEventListener("click", (e) => {
     if (!players[myId]) return;
 
-    let angle = Math.atan2(
+    const angle = Math.atan2(
         e.clientY - canvas.height/2,
         e.clientX - canvas.width/2
     );
@@ -41,6 +42,16 @@ canvas.addEventListener("click", (e) => {
     socket.emit("shoot", angle);
 });
 
+/* SHOP */
+document.getElementById("shopBtn").onclick = () => {
+    document.getElementById("shop").style.display = "block";
+};
+
+function closeShop() {
+    document.getElementById("shop").style.display = "none";
+}
+
+/* UPDATE */
 function update() {
     if (!players[myId]) return;
 
@@ -54,12 +65,13 @@ function update() {
 
     socket.emit("move", { vx, vy });
 
-    let p = players[myId];
+    const p = players[myId];
 
     camera.x += ((p.x - canvas.width/2) - camera.x) * 0.1;
     camera.y += ((p.y - canvas.height/2) - camera.y) * 0.1;
 }
 
+/* DRAW */
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -70,7 +82,7 @@ function draw() {
     ctx.fillRect(0,0,2000,2000);
 
     for (let id in players) {
-        let p = players[id];
+        const p = players[id];
         ctx.fillStyle = id === myId ? "white" : "red";
         ctx.fillRect(p.x-10,p.y-10,20,20);
     }
@@ -87,6 +99,7 @@ function draw() {
     drawMiniMap();
 }
 
+/* MINIMAP */
 function drawMiniMap() {
     const size = 150;
     const mapSize = 2000;
@@ -95,9 +108,9 @@ function drawMiniMap() {
     ctx.fillRect(canvas.width - size - 20, 20, size, size);
 
     for (let id in players) {
-        let p = players[id];
-        let x = canvas.width - size - 20 + (p.x/mapSize)*size;
-        let y = 20 + (p.y/mapSize)*size;
+        const p = players[id];
+        const x = canvas.width - size - 20 + (p.x/mapSize)*size;
+        const y = 20 + (p.y/mapSize)*size;
 
         ctx.fillStyle = id === myId ? "white" : "red";
         ctx.fillRect(x,y,4,4);
@@ -111,13 +124,3 @@ function gameLoop(){
 }
 
 gameLoop();
-
-/* SHOP */
-
-document.getElementById("shopBtn").onclick = () => {
-    document.getElementById("shop").style.display = "block";
-};
-
-function closeShop(){
-    document.getElementById("shop").style.display = "none";
-}
