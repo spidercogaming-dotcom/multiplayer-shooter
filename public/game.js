@@ -1,115 +1,163 @@
 const socket = io();
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const MAP_SIZE = 3000;
-let myId;
 let players = {};
-let bullets = {};
-let keys = {};
-let coins = 200;
+let bullets = [];
+let myId = null;
 
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+let camera = { x: 0, y: 0 };
 
-socket.on("init", (data) => {
-    myId = data.id;
-    players = data.players;
-});
-
-socket.on("newPlayer", (player) => {
-    players[player.id] = player;
-});
-
-socket.on("removePlayer", (id) => {
-    delete players[id];
+socket.on("connect", () => {
+    myId = socket.id;
 });
 
 socket.on("state", (data) => {
     players = data.players;
     bullets = data.bullets;
+
+    if (players[myId]) {
+        document.getElementById("coins").innerText = players[myId].coins;
+        document.getElementById("weapon").innerText = players[myId].weapon;
+    }
 });
 
-socket.on("updateCoins", (c) => {
-    coins = c;
-    document.getElementById("coinCount").innerText = coins;
-});
+let keys = {};
 
-socket.on("crateResult", (r) => {
-    document.getElementById("crateResult").innerText = r;
-});
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-canvas.addEventListener("click", (e) => {
-    if(!players[myId]) return;
+document.addEventListener("click", (e) => {
+    if (!players[myId]) return;
 
-    let rect = canvas.getBoundingClientRect();
-    let mx = e.clientX - rect.left;
-    let my = e.clientY - rect.top;
-
-    let dx = mx - canvas.width/2;
-    let dy = my - canvas.height/2;
-    let angle = Math.atan2(dy, dx);
+    let angle = Math.atan2(
+        e.clientY - canvas.height / 2,
+        e.clientX - canvas.width / 2
+    );
 
     socket.emit("shoot", {
         x: players[myId].x,
         y: players[myId].y,
-        dx: Math.cos(angle)*10,
-        dy: Math.sin(angle)*10
+        angle: angle
     });
 });
 
-function buyCrate(type){
-    socket.emit("buyCrate", type);
+function update() {
+    if (!players[myId]) return;
+
+    let p = players[myId];
+
+    if (keys["w"]) p.y -= 5;
+    if (keys["s"]) p.y += 5;
+    if (keys["a"]) p.x -= 5;
+    if (keys["d"]) p.x += 5;
+
+    socket.emit("move", { x: p.x, y: p.y });
+
+    camera.x += ((p.x - canvas.width/2) - camera.x) * 0.1;
+    camera.y += ((p.y - canvas.height/2) - camera.y) * 0.1;
 }
 
-document.getElementById("shopBtn").onclick = () =>
-    document.getElementById("shopUI").style.display="block";
-
-function closeShop(){
-    document.getElementById("shopUI").style.display="none";
-}
-
-function gameLoop(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if(players[myId]){
-        if(keys["w"]) players[myId].y -= 5;
-        if(keys["s"]) players[myId].y += 5;
-        if(keys["a"]) players[myId].x -= 5;
-        if(keys["d"]) players[myId].x += 5;
-
-        socket.emit("move", players[myId]);
-    }
-
-    let camX = players[myId] ? players[myId].x - canvas.width/2 : 0;
-    let camY = players[myId] ? players[myId].y - canvas.height/2 : 0;
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    ctx.translate(-camX, -camY);
+    ctx.translate(-camera.x, -camera.y);
 
-    ctx.fillStyle="#333";
-    ctx.fillRect(0,0,MAP_SIZE,MAP_SIZE);
+    // Map
+    ctx.fillStyle = "#444";
+    ctx.fillRect(0, 0, 2000, 2000);
 
-    for(let id in players){
+    // Players
+    for (let id in players) {
         let p = players[id];
         ctx.fillStyle = id === myId ? "white" : "red";
-        ctx.fillRect(p.x-10, p.y-10, 20, 20);
-
-        ctx.fillStyle="green";
-        ctx.fillRect(p.x-20, p.y-25, p.health/5, 5);
+        ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
     }
 
-    bullets.forEach(b=>{
-        ctx.fillStyle="yellow";
-        ctx.fillRect(b.x-3,b.y-3,6,6);
+    // Bullets
+    ctx.fillStyle = "yellow";
+    bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+        ctx.fill();
     });
 
     ctx.restore();
+}
 
+function gameLoop() {
+    update();
+    draw();
     requestAnimationFrame(gameLoop);
 }
 
 gameLoop();
+
+
+// SHOP SYSTEM
+
+document.getElementById("shopBtn").onclick = () => {
+    document.getElementById("shop").style.display = "block";
+};
+
+function closeShop() {
+    document.getElementById("shop").style.display = "none";
+}
+
+function buyCrate(type) {
+    if (!players[myId]) return;
+
+    let cost = 0;
+    if (type === "epic") cost = 10;
+    if (type === "rare") cost = 100;
+    if (type === "special") cost = 500;
+
+    if (players[myId].coins < cost) {
+        alert("Not enough coins!");
+        return;
+    }
+
+    socket.emit("addCoins", -cost);
+
+    let weapon = getDrop(type);
+    socket.emit("setWeapon", weapon);
+
+    alert("You got: " + weapon);
+}
+
+function getDrop(type) {
+    let roll = Math.random() * 100;
+
+    if (type === "epic") {
+        if (roll < 65) return randomCommon();
+        if (roll < 80) return randomRare();
+        return "Testi";
+    }
+
+    if (type === "rare") {
+        if (roll < 60) return randomCommon();
+        if (roll < 90) return randomRare();
+        return "Testi";
+    }
+
+    if (type === "special") {
+        if (roll < 59) return randomCommon();
+        if (roll < 90) return randomRare();
+        return "Testi";
+    }
+}
+
+function randomCommon() {
+    let weapons = ["Flawless", "Cramp", "FIT"];
+    return weapons[Math.floor(Math.random() * weapons.length)];
+}
+
+function randomRare() {
+    let weapons = ["Lamp", "Krampus", "Grip"];
+    return weapons[Math.floor(Math.random() * weapons.length)];
+}
