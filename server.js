@@ -13,40 +13,62 @@ const PORT = process.env.PORT || 3000;
 let players = {};
 let bullets = [];
 
+const MAP_SIZE = 2000;
+
+function getFireRate(weapon) {
+    if (["Flawless","Cramp","FIT"].includes(weapon)) return 500;
+    if (["Lamp","Krampus","Grip"].includes(weapon)) return 300;
+    if (weapon === "Testi") return 120;
+    return 500;
+}
+
 io.on("connection", (socket) => {
-    console.log("Player connected:", socket.id);
 
     players[socket.id] = {
         x: 1000,
         y: 1000,
+        vx: 0,
+        vy: 0,
+        health: 100,
         coins: 500,
-        weapon: "Flawless"
+        weapon: "Flawless",
+        lastShot: 0
     };
 
     socket.on("move", (data) => {
         if (!players[socket.id]) return;
-        players[socket.id].x = data.x;
-        players[socket.id].y = data.y;
+        players[socket.id].vx = data.vx;
+        players[socket.id].vy = data.vy;
     });
 
-    socket.on("shoot", (data) => {
+    socket.on("shoot", (angle) => {
+        let p = players[socket.id];
+        if (!p) return;
+
+        let now = Date.now();
+        let fireRate = getFireRate(p.weapon);
+
+        if (now - p.lastShot < fireRate) return;
+
+        p.lastShot = now;
+
         bullets.push({
-            x: data.x,
-            y: data.y,
-            angle: data.angle,
-            speed: 10,
+            x: p.x,
+            y: p.y,
+            angle: angle,
+            speed: 12,
             owner: socket.id
         });
     });
 
     socket.on("addCoins", (amount) => {
-        if (!players[socket.id]) return;
-        players[socket.id].coins += amount;
+        if (players[socket.id])
+            players[socket.id].coins += amount;
     });
 
     socket.on("setWeapon", (weapon) => {
-        if (!players[socket.id]) return;
-        players[socket.id].weapon = weapon;
+        if (players[socket.id])
+            players[socket.id].weapon = weapon;
     });
 
     socket.on("disconnect", () => {
@@ -56,26 +78,58 @@ io.on("connection", (socket) => {
 
 setInterval(() => {
 
+    // Move players (server authoritative)
+    for (let id in players) {
+        let p = players[id];
+        p.x += p.vx * 5;
+        p.y += p.vy * 5;
+
+        p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
+        p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
+    }
+
     // Move bullets
-    bullets.forEach((b) => {
+    bullets.forEach(b => {
         b.x += Math.cos(b.angle) * b.speed;
         b.y += Math.sin(b.angle) * b.speed;
     });
 
-    // Remove bullets outside map
-    bullets = bullets.filter(b =>
-        b.x > 0 && b.x < 2000 &&
-        b.y > 0 && b.y < 2000
-    );
+    // Collision detection
+    bullets = bullets.filter(b => {
 
-    io.emit("state", {
-        players,
-        bullets
+        for (let id in players) {
+            if (id === b.owner) continue;
+
+            let p = players[id];
+            let dx = p.x - b.x;
+            let dy = p.y - b.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < 15) {
+                p.health -= 25;
+
+                if (p.health <= 0) {
+                    players[b.owner].coins += 100;
+                    p.health = 100;
+                    p.x = 1000;
+                    p.y = 1000;
+                }
+
+                return false; // remove bullet
+            }
+        }
+
+        return (
+            b.x > 0 && b.x < MAP_SIZE &&
+            b.y > 0 && b.y < MAP_SIZE
+        );
     });
 
-}, 1000 / 60);
+    io.emit("state", { players, bullets });
+
+}, 1000/60);
 
 server.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+    console.log("Server running on", PORT);
 });
 
