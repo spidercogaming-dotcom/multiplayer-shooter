@@ -9,7 +9,6 @@ canvas.height = window.innerHeight;
 let players = {};
 let bullets = [];
 let myId = null;
-
 let camera = { x: 0, y: 0 };
 
 socket.on("connect", () => {
@@ -18,7 +17,7 @@ socket.on("connect", () => {
 
 socket.on("state", (data) => {
     players = data.players || {};
-    bullets = Array.isArray(data.bullets) ? data.bullets : {};
+    bullets = Array.isArray(data.bullets) ? data.bullets : [];
 
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
@@ -27,11 +26,11 @@ socket.on("state", (data) => {
 });
 
 let keys = {};
-
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-document.addEventListener("click", (e) => {
+/* SHOOT ONLY ON CANVAS */
+canvas.addEventListener("click", (e) => {
     if (!players[myId]) return;
 
     let angle = Math.atan2(
@@ -112,3 +111,13 @@ function gameLoop(){
 }
 
 gameLoop();
+
+/* SHOP */
+
+document.getElementById("shopBtn").onclick = () => {
+    document.getElementById("shop").style.display = "block";
+};
+
+function closeShop(){
+    document.getElementById("shop").style.display = "none";
+}
