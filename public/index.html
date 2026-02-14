@@ -3,21 +3,33 @@
 <head>
     <title>Rise of Ikons</title>
     <style>
-        body { margin: 0; overflow: hidden; background: black; }
-        canvas { background: #222; display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            font-family: Arial;
+        }
+
+        canvas {
+            display: block;
+            background: #222;
+        }
 
         #ui {
             position: fixed;
             top: 10px;
             left: 10px;
             color: white;
-            font-family: Arial;
+            font-size: 18px;
         }
 
         #shopBtn {
             margin-top: 10px;
-            padding: 5px 10px;
+            padding: 6px 12px;
             cursor: pointer;
+            background: #555;
+            color: white;
+            border: none;
         }
 
         #shop {
@@ -31,12 +43,22 @@
             border-radius: 10px;
             color: white;
             text-align: center;
+            width: 300px;
         }
 
         .crateBtn {
-            margin: 10px;
-            padding: 10px;
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 8px;
             cursor: pointer;
+            background: #666;
+            color: white;
+            border: none;
+        }
+
+        .crateBtn:hover {
+            background: #888;
         }
     </style>
 </head>
@@ -45,15 +67,24 @@
 <div id="ui">
     Coins: <span id="coins">0</span><br>
     Weapon: <span id="weapon">Flawless</span><br>
-    <button id="shopBtn">Shop</button>
+    <button id="shopBtn">Open Shop</button>
 </div>
 
 <div id="shop">
     <h2>Crates</h2>
-    <button class="crateBtn" onclick="buyCrate('epic')">Epic Crate (10)</button>
-    <button class="crateBtn" onclick="buyCrate('rare')">Rare Crate (100)</button>
-    <button class="crateBtn" onclick="buyCrate('special')">Special Crate (500)</button>
-    <br><br>
+    <button class="crateBtn" onclick="buyCrate('epic')">
+        Epic Crate (10 coins)
+    </button>
+
+    <button class="crateBtn" onclick="buyCrate('rare')">
+        Rare Crate (100 coins)
+    </button>
+
+    <button class="crateBtn" onclick="buyCrate('special')">
+        Special Crate (500 coins)
+    </button>
+
+    <br>
     <button onclick="closeShop()">Close</button>
 </div>
 
@@ -61,5 +92,6 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
+
 </body>
 </html>
