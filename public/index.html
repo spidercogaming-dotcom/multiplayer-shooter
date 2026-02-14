@@ -11,7 +11,10 @@
         }
 
         canvas {
-            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
             background: #222;
         }
 
@@ -21,6 +24,7 @@
             left: 10px;
             color: white;
             font-size: 18px;
+            z-index: 5;
         }
 
         #shopBtn {
@@ -44,6 +48,7 @@
             color: white;
             text-align: center;
             width: 300px;
+            z-index: 10;
         }
 
         .crateBtn {
@@ -72,15 +77,9 @@
 
 <div id="shop">
     <h2>Crates</h2>
-    <button class="crateBtn" onclick="buyCrate('epic')">
-        Epic Crate (10 coins)
-    </button>
-    <button class="crateBtn" onclick="buyCrate('rare')">
-        Rare Crate (100 coins)
-    </button>
-    <button class="crateBtn" onclick="buyCrate('special')">
-        Special Crate (500 coins)
-    </button>
+    <button class="crateBtn">Epic Crate (10 coins)</button>
+    <button class="crateBtn">Rare Crate (100 coins)</button>
+    <button class="crateBtn">Special Crate (500 coins)</button>
     <br>
     <button onclick="closeShop()">Close</button>
 </div>
@@ -92,4 +91,5 @@
 
 </body>
 </html>
+
 
