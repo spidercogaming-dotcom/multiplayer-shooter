@@ -10,11 +10,13 @@ app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
 
+const MAP_SIZE = 2000;
 let players = {};
 let bullets = [];
 
-const MAP_SIZE = 2000;
-
+/* ===============================
+   WEAPON FIRE RATE SYSTEM
+================================ */
 function getFireRate(weapon) {
     if (["Flawless","Cramp","FIT"].includes(weapon)) return 500;
     if (["Lamp","Krampus","Grip"].includes(weapon)) return 300;
@@ -22,11 +24,24 @@ function getFireRate(weapon) {
     return 500;
 }
 
+/* ===============================
+   SAFE SPAWN SYSTEM
+================================ */
+function randomSpawn() {
+    const margin = 200;
+    return {
+        x: margin + Math.random() * (MAP_SIZE - margin * 2),
+        y: margin + Math.random() * (MAP_SIZE - margin * 2)
+    };
+}
+
 io.on("connection", (socket) => {
 
+    const spawn = randomSpawn();
+
     players[socket.id] = {
-        x: 1000,
-        y: 1000,
+        x: spawn.x,
+        y: spawn.y,
         vx: 0,
         vy: 0,
         health: 100,
@@ -42,21 +57,20 @@ io.on("connection", (socket) => {
     });
 
     socket.on("shoot", (angle) => {
-        let p = players[socket.id];
+        const p = players[socket.id];
         if (!p) return;
 
-        let now = Date.now();
-        let fireRate = getFireRate(p.weapon);
+        const now = Date.now();
+        const fireRate = getFireRate(p.weapon);
 
         if (now - p.lastShot < fireRate) return;
-
         p.lastShot = now;
 
         bullets.push({
             x: p.x,
             y: p.y,
             angle: angle,
-            speed: 12,
+            speed: 10,
             owner: socket.id
         });
     });
@@ -76,13 +90,17 @@ io.on("connection", (socket) => {
     });
 });
 
+/* ===============================
+   GAME LOOP
+================================ */
 setInterval(() => {
 
-    // Move players (server authoritative)
+    // Move players (slower speed)
     for (let id in players) {
         let p = players[id];
-        p.x += p.vx * 5;
-        p.y += p.vy * 5;
+
+        p.x += p.vx * 3;
+        p.y += p.vy * 3;
 
         p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
         p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
@@ -94,28 +112,30 @@ setInterval(() => {
         b.y += Math.sin(b.angle) * b.speed;
     });
 
-    // Collision detection
+    // Bullet collision
     bullets = bullets.filter(b => {
 
         for (let id in players) {
             if (id === b.owner) continue;
 
-            let p = players[id];
-            let dx = p.x - b.x;
-            let dy = p.y - b.y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
+            const p = players[id];
+            const dx = p.x - b.x;
+            const dy = p.y - b.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
 
             if (dist < 15) {
                 p.health -= 25;
 
                 if (p.health <= 0) {
                     players[b.owner].coins += 100;
+
+                    const spawn = randomSpawn();
+                    p.x = spawn.x;
+                    p.y = spawn.y;
                     p.health = 100;
-                    p.x = 1000;
-                    p.y = 1000;
                 }
 
-                return false; // remove bullet
+                return false;
             }
         }
 
@@ -127,9 +147,8 @@ setInterval(() => {
 
     io.emit("state", { players, bullets });
 
-}, 1000/60);
+}, 1000 / 60);
 
 server.listen(PORT, () => {
     console.log("Server running on", PORT);
 });
-
