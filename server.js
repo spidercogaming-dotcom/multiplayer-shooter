@@ -9,14 +9,12 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
-
 const MAP_SIZE = 2000;
+
 let players = {};
 let bullets = [];
 
-/* ===============================
-   WEAPON FIRE RATE SYSTEM
-================================ */
+/* ================= FIRE RATE ================= */
 function getFireRate(weapon) {
     if (["Flawless","Cramp","FIT"].includes(weapon)) return 500;
     if (["Lamp","Krampus","Grip"].includes(weapon)) return 300;
@@ -24,9 +22,7 @@ function getFireRate(weapon) {
     return 500;
 }
 
-/* ===============================
-   SAFE SPAWN SYSTEM
-================================ */
+/* ================= SAFE SPAWN ================= */
 function randomSpawn() {
     const margin = 200;
     return {
@@ -69,7 +65,7 @@ io.on("connection", (socket) => {
         bullets.push({
             x: p.x,
             y: p.y,
-            angle: angle,
+            angle,
             speed: 10,
             owner: socket.id
         });
@@ -90,29 +86,24 @@ io.on("connection", (socket) => {
     });
 });
 
-/* ===============================
-   GAME LOOP
-================================ */
+/* ================= GAME LOOP ================= */
 setInterval(() => {
 
-    // Move players (slower speed)
     for (let id in players) {
         let p = players[id];
 
-        p.x += p.vx * 3;
+        p.x += p.vx * 3;   // slower movement
         p.y += p.vy * 3;
 
         p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
         p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
     }
 
-    // Move bullets
     bullets.forEach(b => {
         b.x += Math.cos(b.angle) * b.speed;
         b.y += Math.sin(b.angle) * b.speed;
     });
 
-    // Bullet collision
     bullets = bullets.filter(b => {
 
         for (let id in players) {
@@ -128,7 +119,6 @@ setInterval(() => {
 
                 if (p.health <= 0) {
                     players[b.owner].coins += 100;
-
                     const spawn = randomSpawn();
                     p.x = spawn.x;
                     p.y = spawn.y;
@@ -152,3 +142,4 @@ setInterval(() => {
 server.listen(PORT, () => {
     console.log("Server running on", PORT);
 });
+
