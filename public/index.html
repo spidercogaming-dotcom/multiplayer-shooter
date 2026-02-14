@@ -1,20 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Rise of Ikons Multiplayer</title>
+<title>Rise of Ikons</title>
 <style>
-body { margin: 0; overflow: hidden; background: #111; color: #fff; font-family: Arial; }
-canvas { background: #222; display: block; margin: 0 auto; }
-#shopBtn { position: absolute; top: 10px; right: 10px; padding: 10px 20px; font-size:16px; background: gold; border:none; cursor:pointer; }
+body { margin:0; overflow:hidden; background:#111; }
+canvas { background:#222; display:block; }
+
+#coinsUI {
+    position:absolute;
+    top:20px;
+    left:20px;
+    color:white;
+    font-size:18px;
+}
+
+#shopBtn {
+    position:absolute;
+    top:20px;
+    right:20px;
+    padding:10px;
+    background:gold;
+    border:none;
+    cursor:pointer;
+}
+
+#shopUI {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:black;
+    color:white;
+    padding:20px;
+    display:none;
+    text-align:center;
+}
 </style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
+
+<div id="coinsUI">Coins: <span id="coinCount">0</span></div>
 <button id="shopBtn">Shop</button>
+
+<div id="shopUI">
+<h2>Crate Shop</h2>
+<button onclick="buyCrate('epic')">Epic Crate (10)</button><br>
+<button onclick="buyCrate('rare')">Rare Crate (100)</button><br>
+<button onclick="buyCrate('special')">Special Crate (500)</button><br><br>
+<button onclick="closeShop()">Close</button>
+<div id="crateResult"></div>
+</div>
+
+<canvas id="game"></canvas>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
+
 </body>
 </html>
-
 
