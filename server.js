@@ -8,31 +8,39 @@ const io = socketIO(server);
 
 app.use(express.static("public"));
 
+const MAP_SIZE = 3000;
 let players = {};
 let bullets = [];
 
 io.on("connection", (socket) => {
 
     players[socket.id] = {
-        x: 1500,
-        y: 1500,
+        id: socket.id,
+        x: MAP_SIZE / 2,
+        y: MAP_SIZE / 2,
         health: 100,
-        coins: 0
+        coins: 200
     };
 
-    socket.emit("currentPlayers", players);
+    socket.emit("init", {
+        id: socket.id,
+        players
+    });
+
     socket.broadcast.emit("newPlayer", players[socket.id]);
 
     socket.on("move", (data) => {
-        if(players[socket.id]) {
-            players[socket.id].x = data.x;
-            players[socket.id].y = data.y;
-        }
+        if (!players[socket.id]) return;
+        players[socket.id].x = data.x;
+        players[socket.id].y = data.y;
     });
 
-    socket.on("shoot", (bullet) => {
+    socket.on("shoot", (data) => {
         bullets.push({
-            ...bullet,
+            x: data.x,
+            y: data.y,
+            dx: data.dx,
+            dy: data.dy,
             owner: socket.id
         });
     });
@@ -52,41 +60,68 @@ io.on("connection", (socket) => {
         }
 
         player.coins -= cost;
-
-        let reward = getRandomReward(type);
-        socket.emit("crateResult", reward);
         socket.emit("updateCoins", player.coins);
+
+        let rand = Math.random() * 100;
+        let reward = "";
+
+        if(type === "epic"){
+            if(rand < 70) reward = "Common Skin";
+            else if(rand < 90) reward = "Rare Skin";
+            else reward = "Epic Weapon";
+        }
+        if(type === "rare"){
+            if(rand < 50) reward = "Rare Weapon";
+            else if(rand < 85) reward = "Epic Weapon";
+            else reward = "Legendary Weapon";
+        }
+        if(type === "special"){
+            if(rand < 40) reward = "Epic Weapon";
+            else if(rand < 80) reward = "Legendary Weapon";
+            else reward = "SPECIAL IKON SKIN";
+        }
+
+        socket.emit("crateResult", reward);
     });
 
     socket.on("disconnect", () => {
         delete players[socket.id];
-        io.emit("playerDisconnected", socket.id);
+        io.emit("removePlayer", socket.id);
     });
 });
 
-function getRandomReward(type) {
-    let rand = Math.random() * 100;
+function gameLoop() {
+    bullets.forEach((b, i) => {
+        b.x += b.dx;
+        b.y += b.dy;
 
-    if(type === "epic") {
-        if(rand < 70) return "Common Skin";
-        if(rand < 90) return "Rare Skin";
-        return "Epic Weapon";
-    }
+        for (let id in players) {
+            if (id === b.owner) continue;
 
-    if(type === "rare") {
-        if(rand < 50) return "Rare Weapon";
-        if(rand < 85) return "Epic Weapon";
-        return "Legendary Weapon";
-    }
+            let p = players[id];
+            let dist = Math.hypot(p.x - b.x, p.y - b.y);
 
-    if(type === "special") {
-        if(rand < 40) return "Epic Weapon";
-        if(rand < 80) return "Legendary Weapon";
-        return "SPECIAL IKON SKIN";
-    }
+            if (dist < 15) {
+                p.health -= 20;
+                bullets.splice(i, 1);
+
+                if (p.health <= 0) {
+                    players[b.owner].coins += 20;
+                    io.to(b.owner).emit("updateCoins", players[b.owner].coins);
+
+                    p.health = 100;
+                    p.x = MAP_SIZE / 2;
+                    p.y = MAP_SIZE / 2;
+                }
+            }
+        }
+    });
+
+    io.emit("state", { players, bullets });
 }
 
-server.listen(3000, () => {
-    console.log("Server running on port 3000");
-});
+setInterval(gameLoop, 1000 / 60);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log("Server running"));
 
