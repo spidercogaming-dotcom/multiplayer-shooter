@@ -25,42 +25,26 @@ socket.on("state", (data) => {
     }
 });
 
-/* ================= MOVEMENT ================= */
-
-let keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
-
-canvas.addEventListener("click", (e) => {
-    if (!players[myId]) return;
-
-    const angle = Math.atan2(
-        e.clientY - canvas.height/2,
-        e.clientX - canvas.width/2
-    );
-
-    socket.emit("shoot", angle);
-});
-
 /* ================= SHOP ================= */
 
+const shop = document.getElementById("shop");
+
 document.getElementById("shopBtn").onclick = () => {
-    document.getElementById("shop").style.display = "block";
+    shop.style.display = "block";
+    canvas.style.pointerEvents = "none";
 };
 
 function closeShop() {
-    document.getElementById("shop").style.display = "none";
+    shop.style.display = "none";
+    canvas.style.pointerEvents = "auto";
 }
 
 function buyCrate(type) {
 
     if (!players[myId]) return;
 
-    let cost = 0;
-
-    if (type === "epic") cost = 10;
-    if (type === "rare") cost = 100;
-    if (type === "special") cost = 500;
+    let cost = type === "epic" ? 10 :
+               type === "rare" ? 100 : 500;
 
     if (players[myId].coins < cost) {
         alert("Not enough coins!");
@@ -102,16 +86,33 @@ function rollWeapon(type) {
 }
 
 function randomCommon() {
-    const weapons = ["Flawless","Cramp","FIT"];
-    return weapons[Math.floor(Math.random() * weapons.length)];
+    return ["Flawless","Cramp","FIT"]
+        [Math.floor(Math.random()*3)];
 }
 
 function randomRare() {
-    const weapons = ["Lamp","Krampus","Grip"];
-    return weapons[Math.floor(Math.random() * weapons.length)];
+    return ["Lamp","Krampus","Grip"]
+        [Math.floor(Math.random()*3)];
 }
 
-/* ================= UPDATE ================= */
+/* ================= MOVEMENT ================= */
+
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+canvas.addEventListener("click", (e) => {
+    if (shop.style.display === "block") return;
+    if (!players[myId]) return;
+
+    const angle = Math.atan2(
+        e.clientY - canvas.height/2,
+        e.clientX - canvas.width/2
+    );
+
+    socket.emit("shoot", angle);
+});
 
 function update() {
 
