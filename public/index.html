@@ -1,45 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Rise of Ikons</title>
-<style>
-body { margin:0; overflow:hidden; background:#111; }
-canvas { background:#222; display:block; }
+    <title>Rise of Ikons</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { background: #222; display: block; }
 
-#coinsUI { position:absolute; top:20px; left:20px; color:white; }
-#shopBtn { position:absolute; top:20px; right:20px; padding:10px; background:gold; border:none; }
+        #ui {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial;
+        }
 
-#shopUI {
- position:absolute;
- top:50%; left:50%;
- transform:translate(-50%,-50%);
- background:black;
- color:white;
- padding:20px;
- display:none;
- text-align:center;
-}
-</style>
+        #shopBtn {
+            margin-top: 10px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        #shop {
+            display: none;
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .crateBtn {
+            margin: 10px;
+            padding: 10px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
-<div id="coinsUI">Coins: <span id="coinCount">200</span></div>
-<button id="shopBtn">Shop</button>
+<div id="ui">
+    Coins: <span id="coins">0</span><br>
+    Weapon: <span id="weapon">Flawless</span><br>
+    <button id="shopBtn">Shop</button>
+</div>
 
-<div id="shopUI">
-<h2>Crate Shop</h2>
-<button onclick="buyCrate('epic')">Epic (10)</button><br>
-<button onclick="buyCrate('rare')">Rare (100)</button><br>
-<button onclick="buyCrate('special')">Special (500)</button><br><br>
-<button onclick="closeShop()">Close</button>
-<div id="crateResult"></div>
+<div id="shop">
+    <h2>Crates</h2>
+    <button class="crateBtn" onclick="buyCrate('epic')">Epic Crate (10)</button>
+    <button class="crateBtn" onclick="buyCrate('rare')">Rare Crate (100)</button>
+    <button class="crateBtn" onclick="buyCrate('special')">Special Crate (500)</button>
+    <br><br>
+    <button onclick="closeShop()">Close</button>
 </div>
 
 <canvas id="game"></canvas>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
-
 </body>
 </html>
-
