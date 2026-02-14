@@ -1,127 +1,71 @@
 const express = require("express");
 const http = require("http");
-const socketIO = require("socket.io");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = new Server(server);
 
 app.use(express.static("public"));
 
-const MAP_SIZE = 3000;
 let players = {};
 let bullets = [];
 
 io.on("connection", (socket) => {
+    console.log("Player connected:", socket.id);
 
     players[socket.id] = {
-        id: socket.id,
-        x: MAP_SIZE / 2,
-        y: MAP_SIZE / 2,
-        health: 100,
-        coins: 200
+        x: 200,
+        y: 200,
+        coins: 0,
+        weapon: "Flawless"
     };
 
-    socket.emit("init", {
-        id: socket.id,
-        players
-    });
-
-    socket.broadcast.emit("newPlayer", players[socket.id]);
-
     socket.on("move", (data) => {
-        if (!players[socket.id]) return;
-        players[socket.id].x = data.x;
-        players[socket.id].y = data.y;
+        if (players[socket.id]) {
+            players[socket.id].x = data.x;
+            players[socket.id].y = data.y;
+        }
     });
 
     socket.on("shoot", (data) => {
         bullets.push({
             x: data.x,
             y: data.y,
-            dx: data.dx,
-            dy: data.dy,
+            angle: data.angle,
+            speed: 8,
             owner: socket.id
         });
     });
 
-    socket.on("buyCrate", (type) => {
-        const player = players[socket.id];
-        if (!player) return;
-
-        let cost = 0;
-        if (type === "epic") cost = 10;
-        if (type === "rare") cost = 100;
-        if (type === "special") cost = 500;
-
-        if (player.coins < cost) {
-            socket.emit("crateResult", "Not enough coins!");
-            return;
+    socket.on("addCoins", (amount) => {
+        if (players[socket.id]) {
+            players[socket.id].coins += amount;
         }
+    });
 
-        player.coins -= cost;
-        socket.emit("updateCoins", player.coins);
-
-        let rand = Math.random() * 100;
-        let reward = "";
-
-        if(type === "epic"){
-            if(rand < 70) reward = "Common Skin";
-            else if(rand < 90) reward = "Rare Skin";
-            else reward = "Epic Weapon";
+    socket.on("setWeapon", (weaponName) => {
+        if (players[socket.id]) {
+            players[socket.id].weapon = weaponName;
         }
-        if(type === "rare"){
-            if(rand < 50) reward = "Rare Weapon";
-            else if(rand < 85) reward = "Epic Weapon";
-            else reward = "Legendary Weapon";
-        }
-        if(type === "special"){
-            if(rand < 40) reward = "Epic Weapon";
-            else if(rand < 80) reward = "Legendary Weapon";
-            else reward = "SPECIAL IKON SKIN";
-        }
-
-        socket.emit("crateResult", reward);
     });
 
     socket.on("disconnect", () => {
         delete players[socket.id];
-        io.emit("removePlayer", socket.id);
     });
 });
 
-function gameLoop() {
-    bullets.forEach((b, i) => {
-        b.x += b.dx;
-        b.y += b.dy;
-
-        for (let id in players) {
-            if (id === b.owner) continue;
-
-            let p = players[id];
-            let dist = Math.hypot(p.x - b.x, p.y - b.y);
-
-            if (dist < 15) {
-                p.health -= 20;
-                bullets.splice(i, 1);
-
-                if (p.health <= 0) {
-                    players[b.owner].coins += 20;
-                    io.to(b.owner).emit("updateCoins", players[b.owner].coins);
-
-                    p.health = 100;
-                    p.x = MAP_SIZE / 2;
-                    p.y = MAP_SIZE / 2;
-                }
-            }
-        }
+setInterval(() => {
+    bullets.forEach((b) => {
+        b.x += Math.cos(b.angle) * b.speed;
+        b.y += Math.sin(b.angle) * b.speed;
     });
 
     io.emit("state", { players, bullets });
-}
+}, 1000 / 60);
 
-setInterval(gameLoop, 1000 / 60);
+server.listen(3000, () => {
+    console.log("Server running on port 3000");
+});
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server running"));
 
