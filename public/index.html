@@ -6,47 +6,31 @@
 body { margin:0; overflow:hidden; background:#111; }
 canvas { background:#222; display:block; }
 
-#coinsUI {
-    position:absolute;
-    top:20px;
-    left:20px;
-    color:white;
-    font-size:18px;
-}
-
-#shopBtn {
-    position:absolute;
-    top:20px;
-    right:20px;
-    padding:10px;
-    background:gold;
-    border:none;
-    cursor:pointer;
-}
+#coinsUI { position:absolute; top:20px; left:20px; color:white; }
+#shopBtn { position:absolute; top:20px; right:20px; padding:10px; background:gold; border:none; }
 
 #shopUI {
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    background:black;
-    color:white;
-    padding:20px;
-    display:none;
-    text-align:center;
+ position:absolute;
+ top:50%; left:50%;
+ transform:translate(-50%,-50%);
+ background:black;
+ color:white;
+ padding:20px;
+ display:none;
+ text-align:center;
 }
 </style>
 </head>
 <body>
 
-<div id="coinsUI">Coins: <span id="coinCount">0</span></div>
+<div id="coinsUI">Coins: <span id="coinCount">200</span></div>
 <button id="shopBtn">Shop</button>
 
 <div id="shopUI">
 <h2>Crate Shop</h2>
-<button onclick="buyCrate('epic')">Epic Crate (10)</button><br>
-<button onclick="buyCrate('rare')">Rare Crate (100)</button><br>
-<button onclick="buyCrate('special')">Special Crate (500)</button><br><br>
+<button onclick="buyCrate('epic')">Epic (10)</button><br>
+<button onclick="buyCrate('rare')">Rare (100)</button><br>
+<button onclick="buyCrate('special')">Special (500)</button><br><br>
 <button onclick="closeShop()">Close</button>
 <div id="crateResult"></div>
 </div>
