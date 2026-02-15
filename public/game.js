@@ -5,10 +5,10 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+const WORLD_SIZE = 2000;
+
 let players = {};
 let myId = null;
-
-const WORLD_SIZE = 2000;
 
 socket.on("connect", () => {
     myId = socket.id;
@@ -25,8 +25,13 @@ socket.on("state", (serverPlayers) => {
     }
 });
 
-function openCrate() {
-    socket.emit("openCrate");
+function toggleShop() {
+    const shop = document.getElementById("shop");
+    shop.style.display = shop.style.display === "none" ? "block" : "none";
+}
+
+function openCrate(type) {
+    socket.emit("openCrate", type);
     animateCrate();
 }
 
@@ -59,13 +64,11 @@ function draw() {
     if (!players[myId]) return;
 
     const me = players[myId];
-
     const camX = me.x - canvas.width / 2;
     const camY = me.y - canvas.height / 2;
 
     for (let id in players) {
         const p = players[id];
-
         const x = p.x - camX;
         const y = p.y - camY;
 
@@ -95,17 +98,17 @@ function drawMinimap() {
 }
 
 function animateCrate() {
-    const animation = document.createElement("div");
-    animation.style.position = "absolute";
-    animation.style.top = "50%";
-    animation.style.left = "50%";
-    animation.style.transform = "translate(-50%, -50%)";
-    animation.style.fontSize = "40px";
-    animation.innerText = "Opening Crate...";
-    document.body.appendChild(animation);
+    const div = document.createElement("div");
+    div.style.position = "absolute";
+    div.style.top = "50%";
+    div.style.left = "50%";
+    div.style.transform = "translate(-50%, -50%)";
+    div.style.fontSize = "40px";
+    div.innerText = "Opening...";
+    document.body.appendChild(div);
 
     setTimeout(() => {
-        animation.remove();
+        div.remove();
     }, 1000);
 }
 
