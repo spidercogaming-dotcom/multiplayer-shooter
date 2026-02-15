@@ -14,7 +14,6 @@ const MAP_SIZE = 2000;
 let players = {};
 let bullets = [];
 
-/* ================= FIRE RATE ================= */
 function getFireRate(weapon) {
     if (["Flawless","Cramp","FIT"].includes(weapon)) return 500;
     if (["Lamp","Krampus","Grip"].includes(weapon)) return 300;
@@ -22,7 +21,6 @@ function getFireRate(weapon) {
     return 500;
 }
 
-/* ================= SAFE SPAWN ================= */
 function randomSpawn() {
     const margin = 200;
     return {
@@ -41,9 +39,10 @@ io.on("connection", (socket) => {
         vx: 0,
         vy: 0,
         health: 100,
-        coins: 500,
+        coins: 10,
         weapon: "Flawless",
-        lastShot: 0
+        lastShot: 0,
+        dead: false
     };
 
     socket.on("move", (data) => {
@@ -54,12 +53,12 @@ io.on("connection", (socket) => {
 
     socket.on("shoot", (angle) => {
         const p = players[socket.id];
-        if (!p) return;
+        if (!p || p.dead) return;
 
         const now = Date.now();
         const fireRate = getFireRate(p.weapon);
-
         if (now - p.lastShot < fireRate) return;
+
         p.lastShot = now;
 
         bullets.push({
@@ -81,19 +80,31 @@ io.on("connection", (socket) => {
             players[socket.id].weapon = weapon;
     });
 
+    socket.on("respawn", () => {
+        const p = players[socket.id];
+        if (!p) return;
+
+        const spawn = randomSpawn();
+        p.x = spawn.x;
+        p.y = spawn.y;
+        p.health = 100;
+        p.dead = false;
+    });
+
     socket.on("disconnect", () => {
         delete players[socket.id];
     });
 });
 
-/* ================= GAME LOOP ================= */
 setInterval(() => {
 
     for (let id in players) {
         let p = players[id];
 
-        p.x += p.vx * 3;   // slower movement
-        p.y += p.vy * 3;
+        if (!p.dead) {
+            p.x += p.vx * 3;
+            p.y += p.vy * 3;
+        }
 
         p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
         p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
@@ -110,6 +121,8 @@ setInterval(() => {
             if (id === b.owner) continue;
 
             const p = players[id];
+            if (p.dead) continue;
+
             const dx = p.x - b.x;
             const dy = p.y - b.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
@@ -118,11 +131,11 @@ setInterval(() => {
                 p.health -= 25;
 
                 if (p.health <= 0) {
-                    players[b.owner].coins += 100;
-                    const spawn = randomSpawn();
-                    p.x = spawn.x;
-                    p.y = spawn.y;
-                    p.health = 100;
+                    p.dead = true;
+
+                    if (players[b.owner]) {
+                        players[b.owner].coins += 20;
+                    }
                 }
 
                 return false;
