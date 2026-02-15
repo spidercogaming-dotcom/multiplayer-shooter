@@ -8,6 +8,13 @@ canvas.height = window.innerHeight;
 let players = {};
 let myId = null;
 
+const keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false
+};
+
 socket.on("connect", () => {
     myId = socket.id;
 });
@@ -31,16 +38,32 @@ function openCrate(type) {
 }
 
 document.addEventListener("keydown", (e) => {
-    const speed = 10;
-
-    if (e.key === "w") socket.emit("move", { dx: 0, dy: -speed });
-    if (e.key === "s") socket.emit("move", { dx: 0, dy: speed });
-    if (e.key === "a") socket.emit("move", { dx: -speed, dy: 0 });
-    if (e.key === "d") socket.emit("move", { dx: speed, dy: 0 });
+    if (e.key in keys) keys[e.key] = true;
 });
+
+document.addEventListener("keyup", (e) => {
+    if (e.key in keys) keys[e.key] = false;
+});
+
+function handleMovement() {
+    const speed = 5;
+    let dx = 0;
+    let dy = 0;
+
+    if (keys.w) dy -= speed;
+    if (keys.s) dy += speed;
+    if (keys.a) dx -= speed;
+    if (keys.d) dx += speed;
+
+    if (dx !== 0 || dy !== 0) {
+        socket.emit("move", { dx, dy });
+    }
+}
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    handleMovement();
 
     for (let id in players) {
         const p = players[id];
@@ -52,4 +75,3 @@ function draw() {
 }
 
 draw();
-
