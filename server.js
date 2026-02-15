@@ -39,7 +39,7 @@ io.on("connection", (socket) => {
         vx: 0,
         vy: 0,
         health: 100,
-        coins: 10,
+        coins: 10, // START WITH 10
         weapon: "Flawless",
         lastShot: 0,
         dead: false
@@ -134,7 +134,7 @@ setInterval(() => {
                     p.dead = true;
 
                     if (players[b.owner]) {
-                        players[b.owner].coins += 20;
+                        players[b.owner].coins += 20; // 20 PER KILL
                     }
                 }
 
@@ -155,4 +155,3 @@ setInterval(() => {
 server.listen(PORT, () => {
     console.log("Server running on", PORT);
 });
-
