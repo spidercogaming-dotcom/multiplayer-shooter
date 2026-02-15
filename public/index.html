@@ -3,11 +3,42 @@
 <head>
     <title>Rise of Ikons</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #111; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: Arial; }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+
+        #shop {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            background: #222;
+            padding: 10px;
+            display: none;
+        }
+
+        button {
+            margin: 5px 0;
+            padding: 5px 10px;
+        }
     </style>
 </head>
 <body>
+
+<div id="ui">
+    Coins: <span id="coins">0</span><br>
+    Weapon: <span id="weapon">Flawless</span><br>
+    <button onclick="toggleShop()">Open Shop</button>
+</div>
+
+<div id="shop">
+    <h3>Crates</h3>
+    <button onclick="openCrate('basic')">Basic Crate (10)</button><br>
+    <button onclick="openCrate('epic')">Epic Crate (25)</button>
+</div>
 
 <canvas id="game"></canvas>
 
