@@ -8,20 +8,23 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+const MAP_WIDTH = 2000;
+const MAP_HEIGHT = 2000;
+
 let players = {};
 let bullets = [];
 
 const weapons = {
     pistol: { fireRate: 500, damage: 20 },
     rifle: { fireRate: 250, damage: 15 },
-    testi: { fireRate: 100, damage: 10 } // fastest
+    testi: { fireRate: 100, damage: 10 }
 };
 
 io.on("connection", (socket) => {
 
     players[socket.id] = {
-        x: 500,
-        y: 300,
+        x: 1000,
+        y: 1000,
         hp: 100,
         coins: 10,
         weapon: "pistol",
@@ -34,6 +37,9 @@ io.on("connection", (socket) => {
 
         p.x += dx;
         p.y += dy;
+
+        p.x = Math.max(0, Math.min(p.x, MAP_WIDTH - 30));
+        p.y = Math.max(0, Math.min(p.y, MAP_HEIGHT - 30));
     });
 
     socket.on("shoot", ({ angle }) => {
@@ -59,15 +65,37 @@ io.on("connection", (socket) => {
 
     socket.on("openCrate", (type) => {
         const p = players[socket.id];
-        if (!p || p.coins < 10) return;
+        if (!p) return;
 
-        p.coins -= 10;
+        let cost = 0;
+        if (type === "basic") cost = 10;
+        if (type === "epic") cost = 25;
+        if (type === "legendary") cost = 50;
+
+        if (p.coins < cost) return;
+
+        p.coins -= cost;
 
         const rand = Math.random();
 
-        if (rand < 0.60) p.weapon = "pistol";
-        else if (rand < 0.90) p.weapon = "rifle";
-        else p.weapon = "testi"; // 10% chance
+        if (type === "basic") {
+            if (rand < 0.7) p.weapon = "pistol";
+            else if (rand < 0.95) p.weapon = "rifle";
+            else p.weapon = "testi";
+        }
+
+        if (type === "epic") {
+            if (rand < 0.6) p.weapon = "rifle";
+            else if (rand < 0.95) p.weapon = "pistol";
+            else p.weapon = "testi";
+        }
+
+        if (type === "legendary") {
+            if (rand < 0.8) p.weapon = "rifle";
+            else p.weapon = "testi";
+        }
+
+        io.to(socket.id).emit("crateResult", p.weapon);
     });
 
     socket.on("disconnect", () => {
@@ -81,9 +109,13 @@ function gameLoop() {
         b.x += b.vx;
         b.y += b.vy;
 
+        if (b.x < 0 || b.y < 0 || b.x > MAP_WIDTH || b.y > MAP_HEIGHT) {
+            bullets.splice(index, 1);
+            return;
+        }
+
         for (let id in players) {
             const p = players[id];
-
             if (id === b.owner) continue;
 
             if (
@@ -96,11 +128,11 @@ function gameLoop() {
 
                 if (p.hp <= 0) {
                     p.hp = 100;
-                    p.x = 500;
-                    p.y = 300;
+                    p.x = 1000;
+                    p.y = 1000;
 
                     if (players[b.owner]) {
-                        players[b.owner].coins += 20; // kill reward
+                        players[b.owner].coins += 20;
                     }
                 }
 
@@ -114,6 +146,4 @@ function gameLoop() {
 
 setInterval(gameLoop, 1000 / 60);
 
-server.listen(3000, () => {
-    console.log("Server running");
-});
+server.listen(3000, () => console.log("Server running"));
