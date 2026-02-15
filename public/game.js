@@ -26,7 +26,6 @@ socket.on("state", (data) => {
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
         document.getElementById("weapon").innerText = players[myId].weapon;
-
         deathScreen.style.display = players[myId].dead ? "block" : "none";
     }
 });
@@ -65,7 +64,6 @@ function buyCrate(type) {
 }
 
 function rollWeapon(type) {
-
     const roll = Math.random() * 100;
 
     if (type === "epic") {
@@ -109,20 +107,19 @@ function playCrateAnimation(finalWeapon) {
     ];
 
     let index = 0;
-    let speed = 50;
     let spins = 0;
+    let totalSpins = 40;
 
-    const interval = setInterval(() => {
+    function spin() {
 
         crateWeaponText.innerText = weapons[index];
         index = (index + 1) % weapons.length;
         spins++;
 
-        if (spins > 20) speed += 15;
-
-        if (spins > 40) {
-            clearInterval(interval);
-
+        if (spins < totalSpins) {
+            const delay = 50 + spins * 5;
+            setTimeout(spin, delay);
+        } else {
             crateWeaponText.innerText = finalWeapon;
 
             setTimeout(() => {
@@ -130,8 +127,9 @@ function playCrateAnimation(finalWeapon) {
                 socket.emit("setWeapon", finalWeapon);
             }, 1500);
         }
+    }
 
-    }, speed);
+    spin();
 }
 
 /* ================= MOVEMENT ================= */
@@ -194,7 +192,6 @@ function draw() {
         ctx.fillStyle = id === myId ? "white" : "red";
         ctx.fillRect(p.x-10,p.y-10,20,20);
 
-        // health bar
         ctx.fillStyle = "red";
         ctx.fillRect(p.x - 15, p.y - 20, 30, 5);
 
@@ -224,4 +221,3 @@ function gameLoop(){
 }
 
 gameLoop();
-
