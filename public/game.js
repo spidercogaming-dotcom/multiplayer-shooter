@@ -5,19 +5,20 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const WORLD_SIZE = 2000;
-
 let players = {};
+let bullets = {};
 let myId = null;
+let camera = { x: 0, y: 0 };
 
-const keys = { w: false, a: false, s: false, d: false };
+const keys = { w:false,a:false,s:false,d:false };
 
 socket.on("connect", () => {
     myId = socket.id;
 });
 
-socket.on("state", (serverPlayers) => {
-    players = serverPlayers;
+socket.on("state", (data) => {
+    players = data.players;
+    bullets = data.bullets;
 
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
@@ -25,55 +26,55 @@ socket.on("state", (serverPlayers) => {
     }
 });
 
-function toggleShop() {
-    const shop = document.getElementById("shop");
-    shop.style.display = shop.style.display === "none" ? "block" : "none";
-}
-
-function openCrate(type) {
-    socket.emit("openCrate", type);
-}
-
-document.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", e => {
     if (e.key in keys) keys[e.key] = true;
 });
 
-document.addEventListener("keyup", (e) => {
+document.addEventListener("keyup", e => {
     if (e.key in keys) keys[e.key] = false;
 });
 
-canvas.addEventListener("click", () => {
-    const me = players[myId];
-    if (!me) return;
+canvas.addEventListener("click", (e) => {
+    const p = players[myId];
+    if (!p) return;
 
-    for (let id in players) {
-        if (id !== myId) {
-            const p = players[id];
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left + camera.x;
+    const mouseY = e.clientY - rect.top + camera.y;
 
-            const dx = p.x - me.x;
-            const dy = p.y - me.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(mouseY - p.y, mouseX - p.x);
 
-            if (dist < 80) {
-                socket.emit("attack", id);
-                break;
-            }
-        }
-    }
+    socket.emit("shoot", { angle });
 });
 
 function handleMovement() {
     const speed = 5;
-    let dx = 0;
-    let dy = 0;
+    let dx = 0, dy = 0;
 
     if (keys.w) dy -= speed;
     if (keys.s) dy += speed;
     if (keys.a) dx -= speed;
     if (keys.d) dx += speed;
 
-    if (dx !== 0 || dy !== 0) {
-        socket.emit("move", { dx, dy });
+    if (dx || dy) socket.emit("move", { dx, dy });
+}
+
+function drawMinimap() {
+    const size = 150;
+    const scale = 0.1;
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(10, 10, size, size);
+
+    for (let id in players) {
+        const p = players[id];
+        ctx.fillStyle = id === myId ? "lime" : "red";
+        ctx.fillRect(
+            10 + p.x * scale,
+            10 + p.y * scale,
+            5,
+            5
+        );
     }
 }
 
@@ -82,41 +83,31 @@ function draw() {
 
     handleMovement();
 
+    const me = players[myId];
+    if (me) {
+        camera.x = me.x - canvas.width / 2;
+        camera.y = me.y - canvas.height / 2;
+    }
+
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
     for (let id in players) {
         const p = players[id];
-
         ctx.fillStyle = id === myId ? "lime" : "red";
         ctx.fillRect(p.x, p.y, 30, 30);
-
-        // HP Bar
-        ctx.fillStyle = "black";
-        ctx.fillRect(p.x, p.y - 10, 30, 5);
-
-        ctx.fillStyle = "green";
-        ctx.fillRect(p.x, p.y - 10, 30 * (p.hp / 100), 5);
     }
+
+    bullets.forEach(b => {
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(b.x, b.y, 5, 5);
+    });
+
+    ctx.restore();
 
     drawMinimap();
 
     requestAnimationFrame(draw);
-}
-
-function drawMinimap() {
-    const mapSize = 150;
-    const scale = mapSize / WORLD_SIZE;
-
-    ctx.fillStyle = "#000";
-    ctx.fillRect(canvas.width - mapSize - 20, 20, mapSize, mapSize);
-
-    for (let id in players) {
-        const p = players[id];
-
-        const miniX = canvas.width - mapSize - 20 + p.x * scale;
-        const miniY = 20 + p.y * scale;
-
-        ctx.fillStyle = id === myId ? "lime" : "red";
-        ctx.fillRect(miniX, miniY, 4, 4);
-    }
 }
 
 draw();
