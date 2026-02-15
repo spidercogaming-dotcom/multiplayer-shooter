@@ -1,94 +1,70 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
+const socketIO = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIO(server);
 
 app.use(express.static("public"));
 
-const PORT = process.env.PORT || 3000;
-const MAP_SIZE = 2000;
-
-let players = {};
-let bullets = [];
-
-function getFireRate(weapon) {
-    if (["Flawless","Cramp","FIT"].includes(weapon)) return 500;
-    if (["Lamp","Krampus","Grip"].includes(weapon)) return 300;
-    if (weapon === "Testi") return 120;
-    return 500;
-}
-
-function randomSpawn() {
-    const margin = 200;
-    return {
-        x: margin + Math.random() * (MAP_SIZE - margin * 2),
-        y: margin + Math.random() * (MAP_SIZE - margin * 2)
-    };
-}
+const players = {};
+const WORLD_SIZE = 2000;
 
 io.on("connection", (socket) => {
-
-    const spawn = randomSpawn();
+    console.log("Player connected:", socket.id);
 
     players[socket.id] = {
-        x: spawn.x,
-        y: spawn.y,
-        vx: 0,
-        vy: 0,
-        health: 100,
-        coins: 10, // START WITH 10
+        id: socket.id,
+        x: Math.random() * WORLD_SIZE,
+        y: Math.random() * WORLD_SIZE,
+        hp: 100,
+        coins: 10,
         weapon: "Flawless",
-        lastShot: 0,
         dead: false
     };
 
     socket.on("move", (data) => {
-        if (!players[socket.id]) return;
-        players[socket.id].vx = data.vx;
-        players[socket.id].vy = data.vy;
+        if (!players[socket.id] || players[socket.id].dead) return;
+
+        players[socket.id].x += data.dx;
+        players[socket.id].y += data.dy;
+
+        players[socket.id].x = Math.max(0, Math.min(WORLD_SIZE, players[socket.id].x));
+        players[socket.id].y = Math.max(0, Math.min(WORLD_SIZE, players[socket.id].y));
     });
 
-    socket.on("shoot", (angle) => {
-        const p = players[socket.id];
-        if (!p || p.dead) return;
+    socket.on("damage", (targetId) => {
+        if (!players[targetId] || players[targetId].dead) return;
 
-        const now = Date.now();
-        const fireRate = getFireRate(p.weapon);
-        if (now - p.lastShot < fireRate) return;
+        players[targetId].hp -= 25;
 
-        p.lastShot = now;
-
-        bullets.push({
-            x: p.x,
-            y: p.y,
-            angle,
-            speed: 10,
-            owner: socket.id
-        });
-    });
-
-    socket.on("addCoins", (amount) => {
-        if (players[socket.id])
-            players[socket.id].coins += amount;
-    });
-
-    socket.on("setWeapon", (weapon) => {
-        if (players[socket.id])
-            players[socket.id].weapon = weapon;
+        if (players[targetId].hp <= 0) {
+            players[targetId].dead = true;
+            players[socket.id].coins += 20;
+        }
     });
 
     socket.on("respawn", () => {
-        const p = players[socket.id];
-        if (!p) return;
+        players[socket.id] = {
+            ...players[socket.id],
+            x: Math.random() * WORLD_SIZE,
+            y: Math.random() * WORLD_SIZE,
+            hp: 100,
+            dead: false
+        };
+    });
 
-        const spawn = randomSpawn();
-        p.x = spawn.x;
-        p.y = spawn.y;
-        p.health = 100;
-        p.dead = false;
+    socket.on("openCrate", () => {
+        const p = players[socket.id];
+        if (!p || p.coins < 10) return;
+
+        p.coins -= 10;
+
+        const rewards = ["Flawless", "Shadow", "Blaze", "Testi"];
+        const reward = rewards[Math.floor(Math.random() * rewards.length)];
+
+        p.weapon = reward;
     });
 
     socket.on("disconnect", () => {
@@ -97,61 +73,7 @@ io.on("connection", (socket) => {
 });
 
 setInterval(() => {
-
-    for (let id in players) {
-        let p = players[id];
-
-        if (!p.dead) {
-            p.x += p.vx * 3;
-            p.y += p.vy * 3;
-        }
-
-        p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
-        p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
-    }
-
-    bullets.forEach(b => {
-        b.x += Math.cos(b.angle) * b.speed;
-        b.y += Math.sin(b.angle) * b.speed;
-    });
-
-    bullets = bullets.filter(b => {
-
-        for (let id in players) {
-            if (id === b.owner) continue;
-
-            const p = players[id];
-            if (p.dead) continue;
-
-            const dx = p.x - b.x;
-            const dy = p.y - b.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-
-            if (dist < 15) {
-                p.health -= 25;
-
-                if (p.health <= 0) {
-                    p.dead = true;
-
-                    if (players[b.owner]) {
-                        players[b.owner].coins += 20; // 20 PER KILL
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        return (
-            b.x > 0 && b.x < MAP_SIZE &&
-            b.y > 0 && b.y < MAP_SIZE
-        );
-    });
-
-    io.emit("state", { players, bullets });
-
+    io.emit("state", players);
 }, 1000 / 60);
 
-server.listen(PORT, () => {
-    console.log("Server running on", PORT);
-});
+server.listen(3000, () => console.log("Server running on 3000"));
