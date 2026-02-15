@@ -1,43 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rise of Ikons</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: Arial; }
-
-        #ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-        }
-
-        #shop {
-            position: absolute;
-            top: 80px;
-            left: 10px;
-            background: #222;
-            padding: 10px;
-            display: none;
-        }
-
-        button {
-            margin: 5px 0;
-            padding: 5px 10px;
-        }
-    </style>
+    <title>Multiplayer Game</title>
 </head>
-<body>
+<body style="margin:0; overflow:hidden; background:#111; color:white; font-family:Arial;">
 
-<div id="ui">
+<div style="position:absolute; top:10px; left:10px;">
     Coins: <span id="coins">0</span><br>
-    Weapon: <span id="weapon">Flawless</span><br>
+    Weapon: <span id="weapon">pistol</span><br><br>
     <button onclick="toggleShop()">Open Shop</button>
 </div>
 
-<div id="shop">
+<div id="shop" style="display:none; position:absolute; top:120px; left:10px; background:#222; padding:20px;">
     <h3>Crates</h3>
-    <button onclick="openCrate('basic')">Basic Crate (10)</button><br>
-    <button onclick="openCrate('epic')">Epic Crate (25)</button>
+    <button onclick="openCrate('basic')">Basic (10)</button><br><br>
+    <button onclick="openCrate('epic')">Epic (25)</button><br><br>
+    <button onclick="openCrate('legendary')">Legendary (50)</button>
+</div>
+
+<div id="crateAnimation" style="
+display:none;
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:black;
+padding:40px;
+font-size:28px;
+border:3px solid gold;">
+Opening...
 </div>
 
 <canvas id="game"></canvas>
@@ -47,4 +38,3 @@
 
 </body>
 </html>
-
