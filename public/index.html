@@ -3,29 +3,11 @@
 <head>
     <title>Rise of Ikons</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #111; color: white; }
-        #ui { position: absolute; top: 10px; left: 10px; }
-        #deathScreen {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-        }
-        button { padding: 10px 20px; }
+        body { margin: 0; overflow: hidden; background: #111; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-
-<div id="ui">
-    Coins: <span id="coins">0</span><br>
-    Weapon: <span id="weapon">Flawless</span><br>
-    <button onclick="openCrate()">Open Crate (10 coins)</button>
-</div>
-
-<div id="deathScreen">
-    <h1>You Died</h1>
-    <button onclick="respawn()">Respawn</button>
-</div>
 
 <canvas id="game"></canvas>
 
