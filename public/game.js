@@ -6,11 +6,15 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let players = {};
-let bullets = {};
+let bullets = [];
 let myId = null;
+
+const MAP_WIDTH = 2000;
+const MAP_HEIGHT = 2000;
+
 let camera = { x: 0, y: 0 };
 
-const keys = { w:false,a:false,s:false,d:false };
+const keys = { w:false, a:false, s:false, d:false };
 
 socket.on("connect", () => {
     myId = socket.id;
@@ -35,14 +39,15 @@ document.addEventListener("keyup", e => {
 });
 
 canvas.addEventListener("click", (e) => {
-    const p = players[myId];
-    if (!p) return;
+    const me = players[myId];
+    if (!me) return;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left + camera.x;
-    const mouseY = e.clientY - rect.top + camera.y;
 
-    const angle = Math.atan2(mouseY - p.y, mouseX - p.x);
+    const worldX = e.clientX - rect.left + camera.x;
+    const worldY = e.clientY - rect.top + camera.y;
+
+    const angle = Math.atan2(worldY - me.y, worldX - me.x);
 
     socket.emit("shoot", { angle });
 });
@@ -59,55 +64,83 @@ function handleMovement() {
     if (dx || dy) socket.emit("move", { dx, dy });
 }
 
-function drawMinimap() {
-    const size = 150;
-    const scale = 0.1;
+function updateCamera() {
+    const me = players[myId];
+    if (!me) return;
 
-    ctx.fillStyle = "black";
-    ctx.fillRect(10, 10, size, size);
+    camera.x = me.x - canvas.width / 2;
+    camera.y = me.y - canvas.height / 2;
 
-    for (let id in players) {
-        const p = players[id];
-        ctx.fillStyle = id === myId ? "lime" : "red";
-        ctx.fillRect(
-            10 + p.x * scale,
-            10 + p.y * scale,
-            5,
-            5
-        );
-    }
+    // Clamp camera inside map
+    camera.x = Math.max(0, Math.min(camera.x, MAP_WIDTH - canvas.width));
+    camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawMap() {
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+}
 
-    handleMovement();
-
-    const me = players[myId];
-    if (me) {
-        camera.x = me.x - canvas.width / 2;
-        camera.y = me.y - canvas.height / 2;
-    }
-
-    ctx.save();
-    ctx.translate(-camera.x, -camera.y);
-
+function drawPlayers() {
     for (let id in players) {
         const p = players[id];
+
         ctx.fillStyle = id === myId ? "lime" : "red";
         ctx.fillRect(p.x, p.y, 30, 30);
     }
+}
 
+function drawBullets() {
     bullets.forEach(b => {
         ctx.fillStyle = "yellow";
         ctx.fillRect(b.x, b.y, 5, 5);
     });
+}
+
+function drawMinimap() {
+    const size = 150;
+    const x = 20;
+    const y = 20;
+
+    const scaleX = size / MAP_WIDTH;
+    const scaleY = size / MAP_HEIGHT;
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(x, y, size, size);
+
+    for (let id in players) {
+        const p = players[id];
+
+        ctx.fillStyle = id === myId ? "lime" : "red";
+
+        ctx.fillRect(
+            x + p.x * scaleX,
+            y + p.y * scaleY,
+            4,
+            4
+        );
+    }
+}
+
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    handleMovement();
+    updateCamera();
+
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    drawMap();
+    drawPlayers();
+    drawBullets();
 
     ctx.restore();
 
     drawMinimap();
 
-    requestAnimationFrame(draw);
+    requestAnimationFrame(gameLoop);
 }
 
-draw();
+gameLoop();
+
