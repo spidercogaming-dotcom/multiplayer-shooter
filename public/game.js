@@ -1,49 +1,55 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Rise of Ikons</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #111; color: white; font-family: Arial; }
+const socket = io();
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-        #ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-        }
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        #shop {
-            position: absolute;
-            top: 80px;
-            left: 10px;
-            background: #222;
-            padding: 10px;
-            display: none;
-        }
+let players = {};
+let myId = null;
 
-        button {
-            margin: 5px 0;
-            padding: 5px 10px;
-        }
-    </style>
-</head>
-<body>
+socket.on("connect", () => {
+    myId = socket.id;
+});
 
-<div id="ui">
-    Coins: <span id="coins">0</span><br>
-    Weapon: <span id="weapon">Flawless</span><br>
-    <button onclick="toggleShop()">Open Shop</button>
-</div>
+socket.on("state", (serverPlayers) => {
+    players = serverPlayers;
 
-<div id="shop">
-    <h3>Crates</h3>
-    <button onclick="openCrate('basic')">Basic Crate (10)</button><br>
-    <button onclick="openCrate('epic')">Epic Crate (25)</button>
-</div>
+    if (players[myId]) {
+        document.getElementById("coins").innerText = players[myId].coins;
+        document.getElementById("weapon").innerText = players[myId].weapon;
+    }
+});
 
-<canvas id="game"></canvas>
+function toggleShop() {
+    const shop = document.getElementById("shop");
+    shop.style.display = shop.style.display === "none" ? "block" : "none";
+}
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="game.js"></script>
+function openCrate(type) {
+    socket.emit("openCrate", type);
+}
 
-</body>
-</html>
+document.addEventListener("keydown", (e) => {
+    const speed = 10;
+
+    if (e.key === "w") socket.emit("move", { dx: 0, dy: -speed });
+    if (e.key === "s") socket.emit("move", { dx: 0, dy: speed });
+    if (e.key === "a") socket.emit("move", { dx: -speed, dy: 0 });
+    if (e.key === "d") socket.emit("move", { dx: speed, dy: 0 });
+});
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let id in players) {
+        const p = players[id];
+        ctx.fillStyle = id === myId ? "lime" : "red";
+        ctx.fillRect(p.x, p.y, 30, 30);
+    }
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+
