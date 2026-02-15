@@ -152,6 +152,3 @@ setInterval(() => {
 
 }, 1000 / 60);
 
-server.listen(PORT, () => {
-    console.log("Server running on", PORT);
-});
