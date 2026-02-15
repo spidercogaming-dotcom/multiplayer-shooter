@@ -1,73 +1,73 @@
 const express = require("express");
 const http = require("http");
-const socketIO = require("socket.io");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = new Server(server);
 
 app.use(express.static("public"));
 
-const WORLD_SIZE = 2000;
 let players = {};
+let bullets = [];
 
-const crates = {
-    basic: { cost: 10, rewards: ["Flawless", "Shadow"] },
-    epic: { cost: 25, rewards: ["Blaze", "Testi"] }
+const weapons = {
+    pistol: { fireRate: 500, damage: 20 },
+    rifle: { fireRate: 250, damage: 15 },
+    testi: { fireRate: 100, damage: 10 } // fastest
 };
 
 io.on("connection", (socket) => {
-    console.log("Player connected:", socket.id);
 
     players[socket.id] = {
-        x: Math.random() * WORLD_SIZE,
-        y: Math.random() * WORLD_SIZE,
+        x: 500,
+        y: 300,
+        hp: 100,
         coins: 10,
-        weapon: "Flawless",
-        hp: 100
+        weapon: "pistol",
+        lastShot: 0
     };
 
-    socket.on("move", (data) => {
+    socket.on("move", ({ dx, dy }) => {
         const p = players[socket.id];
         if (!p) return;
 
-        p.x += data.dx;
-        p.y += data.dy;
-
-        p.x = Math.max(0, Math.min(WORLD_SIZE, p.x));
-        p.y = Math.max(0, Math.min(WORLD_SIZE, p.y));
+        p.x += dx;
+        p.y += dy;
     });
 
-    socket.on("attack", (targetId) => {
-        const attacker = players[socket.id];
-        const target = players[targetId];
+    socket.on("shoot", ({ angle }) => {
+        const p = players[socket.id];
+        if (!p) return;
 
-        if (!attacker || !target) return;
+        const now = Date.now();
+        const weapon = weapons[p.weapon];
 
-        target.hp -= 25;
+        if (now - p.lastShot < weapon.fireRate) return;
 
-        if (target.hp <= 0) {
-            attacker.coins += 20;
+        p.lastShot = now;
 
-            target.hp = 100;
-            target.x = Math.random() * WORLD_SIZE;
-            target.y = Math.random() * WORLD_SIZE;
-        }
+        bullets.push({
+            x: p.x + 15,
+            y: p.y + 15,
+            vx: Math.cos(angle) * 10,
+            vy: Math.sin(angle) * 10,
+            owner: socket.id,
+            damage: weapon.damage
+        });
     });
 
     socket.on("openCrate", (type) => {
         const p = players[socket.id];
-        const crate = crates[type];
+        if (!p || p.coins < 10) return;
 
-        if (!p || !crate) return;
-        if (p.coins < crate.cost) return;
+        p.coins -= 10;
 
-        p.coins -= crate.cost;
+        const rand = Math.random();
 
-        const reward =
-            crate.rewards[Math.floor(Math.random() * crate.rewards.length)];
-
-        p.weapon = reward;
+        if (rand < 0.60) p.weapon = "pistol";
+        else if (rand < 0.90) p.weapon = "rifle";
+        else p.weapon = "testi"; // 10% chance
     });
 
     socket.on("disconnect", () => {
@@ -75,11 +75,45 @@ io.on("connection", (socket) => {
     });
 });
 
-setInterval(() => {
-    io.emit("state", players);
-}, 1000 / 60);
+function gameLoop() {
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+    bullets.forEach((b, index) => {
+        b.x += b.vx;
+        b.y += b.vy;
+
+        for (let id in players) {
+            const p = players[id];
+
+            if (id === b.owner) continue;
+
+            if (
+                b.x > p.x &&
+                b.x < p.x + 30 &&
+                b.y > p.y &&
+                b.y < p.y + 30
+            ) {
+                p.hp -= b.damage;
+
+                if (p.hp <= 0) {
+                    p.hp = 100;
+                    p.x = 500;
+                    p.y = 300;
+
+                    if (players[b.owner]) {
+                        players[b.owner].coins += 20; // kill reward
+                    }
+                }
+
+                bullets.splice(index, 1);
+            }
+        }
+    });
+
+    io.emit("state", { players, bullets });
+}
+
+setInterval(gameLoop, 1000 / 60);
+
+server.listen(3000, () => {
+    console.log("Server running");
 });
