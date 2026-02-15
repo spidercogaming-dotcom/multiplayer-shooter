@@ -11,17 +11,23 @@ let bullets = [];
 let myId = null;
 let camera = { x: 0, y: 0 };
 
+const deathScreen = document.getElementById("deathScreen");
+const crateScreen = document.getElementById("crateScreen");
+const crateWeaponText = document.getElementById("crateWeapon");
+
 socket.on("connect", () => {
     myId = socket.id;
 });
 
 socket.on("state", (data) => {
     players = data.players || {};
-    bullets = Array.isArray(data.bullets) ? data.bullets : [];
+    bullets = data.bullets || [];
 
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
         document.getElementById("weapon").innerText = players[myId].weapon;
+
+        deathScreen.style.display = players[myId].dead ? "block" : "none";
     }
 });
 
@@ -52,14 +58,10 @@ function buyCrate(type) {
     }
 
     socket.emit("addCoins", -cost);
-
-    const weapon = rollWeapon(type);
-
-    socket.emit("setWeapon", weapon);
-
-    alert("You got: " + weapon);
-
     closeShop();
+
+    const finalWeapon = rollWeapon(type);
+    playCrateAnimation(finalWeapon);
 }
 
 function rollWeapon(type) {
@@ -86,13 +88,50 @@ function rollWeapon(type) {
 }
 
 function randomCommon() {
-    return ["Flawless","Cramp","FIT"]
-        [Math.floor(Math.random()*3)];
+    return ["Flawless","Cramp","FIT"][Math.floor(Math.random()*3)];
 }
 
 function randomRare() {
-    return ["Lamp","Krampus","Grip"]
-        [Math.floor(Math.random()*3)];
+    return ["Lamp","Krampus","Grip"][Math.floor(Math.random()*3)];
+}
+
+/* ================= CRATE ANIMATION ================= */
+
+function playCrateAnimation(finalWeapon) {
+
+    crateScreen.style.display = "block";
+    crateWeaponText.innerText = "";
+
+    const weapons = [
+        "Flawless","Cramp","FIT",
+        "Lamp","Krampus","Grip",
+        "Testi"
+    ];
+
+    let index = 0;
+    let speed = 50;
+    let spins = 0;
+
+    const interval = setInterval(() => {
+
+        crateWeaponText.innerText = weapons[index];
+        index = (index + 1) % weapons.length;
+        spins++;
+
+        if (spins > 20) speed += 15;
+
+        if (spins > 40) {
+            clearInterval(interval);
+
+            crateWeaponText.innerText = finalWeapon;
+
+            setTimeout(() => {
+                crateScreen.style.display = "none";
+                socket.emit("setWeapon", finalWeapon);
+            }, 1500);
+        }
+
+    }, speed);
 }
 
 /* ================= MOVEMENT ================= */
@@ -103,8 +142,7 @@ document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
 canvas.addEventListener("click", (e) => {
-    if (shop.style.display === "block") return;
-    if (!players[myId]) return;
+    if (!players[myId] || players[myId].dead) return;
 
     const angle = Math.atan2(
         e.clientY - canvas.height/2,
@@ -114,9 +152,15 @@ canvas.addEventListener("click", (e) => {
     socket.emit("shoot", angle);
 });
 
+function respawn() {
+    socket.emit("respawn");
+}
+
+/* ================= GAME LOOP ================= */
+
 function update() {
 
-    if (!players[myId]) return;
+    if (!players[myId] || players[myId].dead) return;
 
     let vx = 0;
     let vy = 0;
@@ -134,8 +178,6 @@ function update() {
     camera.y += ((p.y - canvas.height/2) - camera.y) * 0.1;
 }
 
-/* ================= DRAW ================= */
-
 function draw() {
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -148,8 +190,21 @@ function draw() {
 
     for (let id in players) {
         const p = players[id];
+
         ctx.fillStyle = id === myId ? "white" : "red";
         ctx.fillRect(p.x-10,p.y-10,20,20);
+
+        // health bar
+        ctx.fillStyle = "red";
+        ctx.fillRect(p.x - 15, p.y - 20, 30, 5);
+
+        ctx.fillStyle = "lime";
+        ctx.fillRect(
+            p.x - 15,
+            p.y - 20,
+            30 * (p.health / 100),
+            5
+        );
     }
 
     ctx.fillStyle = "yellow";
@@ -160,25 +215,6 @@ function draw() {
     });
 
     ctx.restore();
-
-    drawMiniMap();
-}
-
-function drawMiniMap() {
-    const size = 150;
-    const mapSize = 2000;
-
-    ctx.fillStyle = "black";
-    ctx.fillRect(canvas.width - size - 20, 20, size, size);
-
-    for (let id in players) {
-        const p = players[id];
-        const x = canvas.width - size - 20 + (p.x/mapSize)*size;
-        const y = 20 + (p.y/mapSize)*size;
-
-        ctx.fillStyle = id === myId ? "white" : "red";
-        ctx.fillRect(x,y,4,4);
-    }
 }
 
 function gameLoop(){
@@ -188,3 +224,4 @@ function gameLoop(){
 }
 
 gameLoop();
+
