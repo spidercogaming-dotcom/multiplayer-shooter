@@ -3,11 +3,111 @@
 <head>
     <title>Rise of Ikons</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #111; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            font-family: Arial;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            background: #222;
+        }
+
+        #ui {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            z-index: 5;
+        }
+
+        button {
+            padding: 6px 10px;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+
+        #shop {
+            display: none;
+            position: fixed;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+            width: 300px;
+            z-index: 10;
+        }
+
+        .crateBtn {
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        #deathScreen, #crateScreen {
+            display:none;
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.9);
+            color:white;
+            z-index:30;
+            text-align:center;
+            padding-top:200px;
+        }
+
+        #crateWeapon {
+            font-size:50px;
+            margin-top:40px;
+        }
     </style>
 </head>
 <body>
+
+<div id="ui">
+    Coins: <span id="coins">0</span><br>
+    Weapon: <span id="weapon">Flawless</span><br>
+    <button id="shopBtn">Open Shop</button>
+</div>
+
+<div id="shop">
+    <h2>Crates</h2>
+
+    <button class="crateBtn" onclick="buyCrate('epic')">
+        Epic Crate (10 coins)
+    </button>
+
+    <button class="crateBtn" onclick="buyCrate('rare')">
+        Rare Crate (100 coins)
+    </button>
+
+    <button class="crateBtn" onclick="buyCrate('special')">
+        Special Crate (500 coins)
+    </button>
+
+    <button onclick="closeShop()">Close</button>
+</div>
+
+<div id="deathScreen">
+    <h1>YOU DIED</h1>
+    <button onclick="respawn()">Respawn</button>
+</div>
+
+<div id="crateScreen">
+    <h1>Opening Crate...</h1>
+    <div id="crateWeapon"></div>
+</div>
 
 <canvas id="game"></canvas>
 
@@ -16,3 +116,5 @@
 
 </body>
 </html>
+
+
