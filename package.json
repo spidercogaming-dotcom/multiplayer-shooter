@@ -1,12 +1,13 @@
 {
-  "name": "mini-shooter",
+  "name": "rise-of-ikons",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "serv.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node serv.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   }
 }
+
