@@ -1,7 +1,7 @@
 {
   "name": "rise-of-ikons",
   "version": "1.0.0",
-  "main": "serv.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
@@ -10,4 +10,3 @@
     "socket.io": "^4.7.2"
   }
 }
-
