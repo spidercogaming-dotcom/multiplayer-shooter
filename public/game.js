@@ -28,11 +28,20 @@ socket.on("state", (data) => {
     }
 });
 
+// Show crate result only if server allows
 socket.on("crateResult", (weapon) => {
     const box = document.getElementById("crateAnimation");
     box.innerText = "You got: " + weapon + "!";
     box.style.display = "block";
-    setTimeout(() => box.style.display = "none", 800); // faster animation
+    setTimeout(() => box.style.display = "none", 600); // faster
+});
+
+// Denied if not enough coins
+socket.on("crateDenied", () => {
+    const box = document.getElementById("crateAnimation");
+    box.innerText = "Not enough coins!";
+    box.style.display = "block";
+    setTimeout(() => box.style.display = "none", 800);
 });
 
 function toggleShop() {
@@ -41,33 +50,7 @@ function toggleShop() {
 }
 
 function openCrate(type) {
-    const me = players[myId];
-    if (!me) return;
-
-    let cost = 0;
-    if (type === "basic") cost = 10;
-    if (type === "epic") cost = 25;
-    if (type === "legendary") cost = 50;
-
-    if (me.coins < cost) return; // cannot open if not enough coins
-
-    socket.emit("openCrate", type);
-    startCrateAnimation();
-}
-
-function startCrateAnimation() {
-    const box = document.getElementById("crateAnimation");
-    box.style.display = "block";
-
-    const weapons = ["pistol", "rifle", "sniper", "laser"];
-    let i = 0;
-
-    const interval = setInterval(() => {
-        box.innerText = "Opening... " + weapons[i % weapons.length];
-        i++;
-    }, 80); // faster animation
-
-    socket.once("crateResult", () => clearInterval(interval));
+    socket.emit("openCrate", type); // server decides if allowed
 }
 
 document.addEventListener("keydown", e => { if (e.key in keys) keys[e.key] = true; });
