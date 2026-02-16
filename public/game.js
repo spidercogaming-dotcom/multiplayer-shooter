@@ -116,16 +116,14 @@ function collectItems() {
     // Coins
     coins.forEach((c, index) => {
         if (me.x < c.x + 15 && me.x + 30 > c.x && me.y < c.y + 15 && me.y + 30 > c.y) {
-            socket.emit("move", {}); // dummy emit to trigger server update
-            socket.emit("collectCoin", c); // optional server-side collect if needed
-            coins.splice(index, 1);
             me.coins += 1;
+            coins.splice(index, 1);
         }
     });
 
     // Health packs
     healthPacks.forEach((h, index) => {
-        if (me.x < h.x + 15 && me.x + 30 > h.x && me.y < h.y + 15 && me.y + 30 > h.y) {
+        if (me.x < h.x + 20 && me.x + 30 > h.x && me.y < h.y + 20 && me.y + 30 > h.y) {
             me.hp = Math.min(100, me.hp + h.value);
             healthPacks.splice(index, 1);
         }
