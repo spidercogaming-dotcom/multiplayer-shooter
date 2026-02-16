@@ -86,13 +86,29 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-// DRAW GRID BACKGROUND (before camera translate)
+// PARALLAX BACKGROUND
 function drawBackground() {
+    // Far layer - sky
+    ctx.fillStyle = "#0a0a2a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Far hills - moves slower (0.2 speed)
+    ctx.fillStyle = "#113311"; 
+    for (let i = -camera.x*0.2 % 2000; i < canvas.width; i += 200) {
+        ctx.fillRect(i, canvas.height - 150, 300, 100);
+    }
+
+    // Mid layer - trees (0.5 speed)
+    ctx.fillStyle = "#224422";
+    for (let i = -camera.x*0.5 % 2000; i < canvas.width; i += 100) {
+        ctx.fillRect(i, canvas.height - 200, 30, 60);
+    }
+
+    // Near layer - ground grid (1x speed)
     const gridSize = 50;
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 1;
 
-    // Only draw lines that are visible on screen
     const startX = Math.floor(camera.x / gridSize) * gridSize;
     const startY = Math.floor(camera.y / gridSize) * gridSize;
     const endX = camera.x + canvas.width;
@@ -138,8 +154,7 @@ function draw() {
     handleMovement();
     updateCamera();
 
-    // draw background grid first
-    drawBackground();
+    drawBackground(); // parallax background
 
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
