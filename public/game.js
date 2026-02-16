@@ -86,23 +86,29 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-// DRAW GRID BACKGROUND (full map)
+// DRAW GRID BACKGROUND (before camera translate)
 function drawBackground() {
     const gridSize = 50;
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 1;
 
-    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
+    // Only draw lines that are visible on screen
+    const startX = Math.floor(camera.x / gridSize) * gridSize;
+    const startY = Math.floor(camera.y / gridSize) * gridSize;
+    const endX = camera.x + canvas.width;
+    const endY = camera.y + canvas.height;
+
+    for (let x = startX; x <= endX; x += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, MAP_HEIGHT);
+        ctx.moveTo(x - camera.x, 0);
+        ctx.lineTo(x - camera.x, canvas.height);
         ctx.stroke();
     }
 
-    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
+    for (let y = startY; y <= endY; y += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(MAP_WIDTH, y);
+        ctx.moveTo(0, y - camera.y);
+        ctx.lineTo(canvas.width, y - camera.y);
         ctx.stroke();
     }
 }
@@ -132,15 +138,13 @@ function draw() {
     handleMovement();
     updateCamera();
 
+    // draw background grid first
+    drawBackground();
+
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // Draw full map background first
-    ctx.fillStyle="#111";
-    ctx.fillRect(0,0,MAP_WIDTH,MAP_HEIGHT);
-    drawBackground(); // grid covers whole map
-
-    // Draw players
+    // Players
     for (let id in players) {
         const p = players[id];
         ctx.fillStyle = id===myId?"lime":"red";
@@ -153,7 +157,7 @@ function draw() {
         ctx.fillRect(p.x, p.y - 10, 30 * (p.hp / 100), 5);
     }
 
-    // Draw bullets
+    // Bullets
     bullets.forEach(b=>{
         ctx.fillStyle="yellow";
         ctx.fillRect(b.x,b.y,5,5);
