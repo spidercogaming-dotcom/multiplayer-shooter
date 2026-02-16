@@ -26,7 +26,9 @@ socket.on("state", (data) => {
     }
 
     // Update leaderboard
-    const sorted = Object.values(players).sort((a,b)=>b.coins - a.coins).slice(0,5);
+    const sorted = Object.values(players)
+        .sort((a,b)=>b.coins - a.coins)
+        .slice(0,5);
     const listDiv = document.getElementById("leaderboardList");
     listDiv.innerHTML = "";
     sorted.forEach(p=>{
@@ -93,7 +95,7 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-// DRAW MINIMAP TOP-RIGHT
+// Minimap top-right
 function drawMinimap() {
     const size = 150;
     const scaleX = size / MAP_WIDTH;
@@ -121,11 +123,11 @@ function draw() {
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // STATIC BACKGROUND
+    // Static background
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
-    // Players
+    // Draw players
     for (let id in players) {
         const p = players[id];
 
@@ -146,7 +148,7 @@ function draw() {
         ctx.fillText(p.name, p.x + 15, p.y - 15);
     }
 
-    // Bullets
+    // Draw bullets
     bullets.forEach(b=>{
         ctx.fillStyle="yellow";
         ctx.fillRect(b.x,b.y,5,5);
