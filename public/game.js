@@ -28,15 +28,14 @@ socket.on("state", (data) => {
     }
 });
 
-// Show crate result only if server allows
+// Crate events
 socket.on("crateResult", (weapon) => {
     const box = document.getElementById("crateAnimation");
     box.innerText = "You got: " + weapon + "!";
     box.style.display = "block";
-    setTimeout(() => box.style.display = "none", 600); // faster
+    setTimeout(() => box.style.display = "none", 600);
 });
 
-// Denied if not enough coins
 socket.on("crateDenied", () => {
     const box = document.getElementById("crateAnimation");
     box.innerText = "Not enough coins!";
@@ -89,18 +88,46 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
+// DRAW MINIMAP TOP-RIGHT
 function drawMinimap() {
     const size = 150;
     const scaleX = size / MAP_WIDTH;
     const scaleY = size / MAP_HEIGHT;
 
-    ctx.fillStyle = "black";
-    ctx.fillRect(20, 20, size, size);
+    const xPos = canvas.width - size - 20;
+    const yPos = 20;
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(xPos, yPos, size, size);
 
     for (let id in players) {
         const p = players[id];
         ctx.fillStyle = id === myId ? "lime" : "red";
-        ctx.fillRect(20 + p.x * scaleX, 20 + p.y * scaleY, 4, 4);
+        ctx.fillRect(xPos + p.x * scaleX, yPos + p.y * scaleY, 4, 4);
+    }
+}
+
+// DRAW GRID BACKGROUND
+function drawBackground() {
+    const gridSize = 50;
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+
+    const startX = -camera.x % gridSize;
+    const startY = -camera.y % gridSize;
+
+    for (let x = startX; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+
+    for (let y = startY; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
     }
 }
 
@@ -113,8 +140,12 @@ function draw() {
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    ctx.fillStyle="#222";
+    // MAP BACKGROUND
+    ctx.fillStyle="#111";
     ctx.fillRect(0,0,MAP_WIDTH,MAP_HEIGHT);
+
+    // GRID for motion feel
+    drawBackground();
 
     // Players
     for (let id in players) {
@@ -136,6 +167,7 @@ function draw() {
     });
 
     ctx.restore();
+
     drawMinimap();
 
     requestAnimationFrame(draw);
