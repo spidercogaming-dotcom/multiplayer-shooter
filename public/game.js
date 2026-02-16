@@ -24,11 +24,9 @@ socket.on("state", (data) => {
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
         document.getElementById("weapon").innerText = players[myId].weapon;
-        document.getElementById("hp").innerText = players[myId].hp;
     }
 });
 
-// Crate events
 socket.on("crateResult", (weapon) => {
     const box = document.getElementById("crateAnimation");
     box.innerText = "You got: " + weapon + "!";
@@ -49,7 +47,7 @@ function toggleShop() {
 }
 
 function openCrate(type) {
-    socket.emit("openCrate", type); // server decides if allowed
+    socket.emit("openCrate", type);
 }
 
 document.addEventListener("keydown", e => { if (e.key in keys) keys[e.key] = true; });
@@ -88,25 +86,6 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-// DRAW MINIMAP TOP-RIGHT
-function drawMinimap() {
-    const size = 150;
-    const scaleX = size / MAP_WIDTH;
-    const scaleY = size / MAP_HEIGHT;
-
-    const xPos = canvas.width - size - 20;
-    const yPos = 20;
-
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(xPos, yPos, size, size);
-
-    for (let id in players) {
-        const p = players[id];
-        ctx.fillStyle = id === myId ? "lime" : "red";
-        ctx.fillRect(xPos + p.x * scaleX, yPos + p.y * scaleY, 4, 4);
-    }
-}
-
 // DRAW GRID BACKGROUND
 function drawBackground() {
     const gridSize = 50;
@@ -131,23 +110,42 @@ function drawBackground() {
     }
 }
 
+// DRAW MINIMAP TOP-RIGHT (screen space)
+function drawMinimap() {
+    const size = 150;
+    const scaleX = size / MAP_WIDTH;
+    const scaleY = size / MAP_HEIGHT;
+
+    const xPos = canvas.width - size - 20;
+    const yPos = 20;
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(xPos, yPos, size, size);
+
+    for (let id in players) {
+        const p = players[id];
+        ctx.fillStyle = id === myId ? "lime" : "red";
+        ctx.fillRect(xPos + p.x * scaleX, yPos + p.y * scaleY, 4, 4);
+    }
+}
+
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     handleMovement();
     updateCamera();
 
+    // BACKGROUND grid
+    drawBackground();
+
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // MAP BACKGROUND
+    // MAP
     ctx.fillStyle="#111";
     ctx.fillRect(0,0,MAP_WIDTH,MAP_HEIGHT);
 
-    // GRID for motion feel
-    drawBackground();
-
-    // Players
+    // PLAYERS
     for (let id in players) {
         const p = players[id];
         ctx.fillStyle = id===myId?"lime":"red";
@@ -160,7 +158,7 @@ function draw() {
         ctx.fillRect(p.x, p.y - 10, 30 * (p.hp / 100), 5);
     }
 
-    // Bullets
+    // BULLETS
     bullets.forEach(b=>{
         ctx.fillStyle="yellow";
         ctx.fillRect(b.x,b.y,5,5);
