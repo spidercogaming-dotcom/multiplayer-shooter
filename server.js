@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public"));
+app.use(express.static("public")); // make sure index.html & game.js are in public/
 
 const MAP_WIDTH = 2000;
 const MAP_HEIGHT = 2000;
@@ -23,12 +23,15 @@ const weapons = {
     laser: { fireRate: 100, damage: 10 }
 };
 
-// Spawn coins and health packs randomly
+// Spawn items (coins + health) — less frequent for harder gameplay
 function spawnItems() {
-    if (coins.length < 20 && Math.random() < 0.05) {
+    // Coins spawn less often
+    if (coins.length < 20 && Math.random() < 0.02) {
         coins.push({ x: Math.random() * MAP_WIDTH, y: Math.random() * MAP_HEIGHT });
     }
-    if (healthPacks.length < 10 && Math.random() < 0.02) {
+
+    // Health packs spawn very rarely
+    if (healthPacks.length < 10 && Math.random() < 0.005) {
         healthPacks.push({ x: Math.random() * MAP_WIDTH, y: Math.random() * MAP_HEIGHT, value: 30 });
     }
 }
@@ -158,4 +161,3 @@ function gameLoop() {
 setInterval(gameLoop, 1000 / 60);
 
 server.listen(3000, () => console.log("Server running"));
-
