@@ -72,12 +72,15 @@ io.on("connection", (socket) => {
         if (type === "epic") cost = 25;
         if (type === "legendary") cost = 50;
 
-        // FIX: check coins first
-        if (p.coins < cost) return; 
+        // Server enforces coins
+        if (p.coins < cost) {
+            io.to(socket.id).emit("crateDenied");
+            return;
+        }
 
         p.coins -= cost;
-        const rand = Math.random();
 
+        const rand = Math.random();
         if (type === "basic") {
             if (rand < 0.7) p.weapon = "pistol";
             else if (rand < 0.95) p.weapon = "rifle";
