@@ -6,15 +6,13 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public")); // make sure index.html & game.js are in public/
+app.use(express.static("public"));
 
 const MAP_WIDTH = 2000;
 const MAP_HEIGHT = 2000;
 
 let players = {};
 let bullets = [];
-let coins = [];
-let healthPacks = [];
 
 const weapons = {
     pistol: { fireRate: 500, damage: 20 },
@@ -22,19 +20,6 @@ const weapons = {
     sniper: { fireRate: 800, damage: 50 },
     laser: { fireRate: 100, damage: 10 }
 };
-
-// Spawn items (coins + health) — less frequent for harder gameplay
-function spawnItems() {
-    // Coins spawn less often
-    if (coins.length < 20 && Math.random() < 0.02) {
-        coins.push({ x: Math.random() * MAP_WIDTH, y: Math.random() * MAP_HEIGHT });
-    }
-
-    // Health packs spawn very rarely
-    if (healthPacks.length < 10 && Math.random() < 0.005) {
-        healthPacks.push({ x: Math.random() * MAP_WIDTH, y: Math.random() * MAP_HEIGHT, value: 30 });
-    }
-}
 
 io.on("connection", (socket) => {
 
@@ -86,7 +71,9 @@ io.on("connection", (socket) => {
         if (type === "basic") cost = 10;
         if (type === "epic") cost = 25;
         if (type === "legendary") cost = 50;
-        if (p.coins < cost) return;
+
+        // FIX: check coins first
+        if (p.coins < cost) return; 
 
         p.coins -= cost;
         const rand = Math.random();
@@ -107,25 +94,12 @@ io.on("connection", (socket) => {
         io.to(socket.id).emit("crateResult", p.weapon);
     });
 
-    socket.on("buyItem", (item) => {
-        const p = players[socket.id];
-        if (!p) return;
-
-        if (item === "health" && p.coins >= 20) {
-            p.hp = Math.min(100, p.hp + 30);
-            p.coins -= 20;
-        }
-    });
-
     socket.on("disconnect", () => {
         delete players[socket.id];
     });
 });
 
 function gameLoop() {
-    spawnItems();
-
-    // Update bullets
     bullets.forEach((b, index) => {
         b.x += b.vx;
         b.y += b.vy;
@@ -155,9 +129,10 @@ function gameLoop() {
         }
     });
 
-    io.emit("state", { players, bullets, coins, healthPacks });
+    io.emit("state", { players, bullets });
 }
 
 setInterval(gameLoop, 1000 / 60);
 
 server.listen(3000, () => console.log("Server running"));
+
