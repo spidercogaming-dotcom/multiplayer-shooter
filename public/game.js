@@ -86,49 +86,6 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-// PARALLAX BACKGROUND
-function drawBackground() {
-    // Far layer - sky
-    ctx.fillStyle = "#0a0a2a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Far hills - moves slower (0.2 speed)
-    ctx.fillStyle = "#113311"; 
-    for (let i = -camera.x*0.2 % 2000; i < canvas.width; i += 200) {
-        ctx.fillRect(i, canvas.height - 150, 300, 100);
-    }
-
-    // Mid layer - trees (0.5 speed)
-    ctx.fillStyle = "#224422";
-    for (let i = -camera.x*0.5 % 2000; i < canvas.width; i += 100) {
-        ctx.fillRect(i, canvas.height - 200, 30, 60);
-    }
-
-    // Near layer - ground grid (1x speed)
-    const gridSize = 50;
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 1;
-
-    const startX = Math.floor(camera.x / gridSize) * gridSize;
-    const startY = Math.floor(camera.y / gridSize) * gridSize;
-    const endX = camera.x + canvas.width;
-    const endY = camera.y + canvas.height;
-
-    for (let x = startX; x <= endX; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x - camera.x, 0);
-        ctx.lineTo(x - camera.x, canvas.height);
-        ctx.stroke();
-    }
-
-    for (let y = startY; y <= endY; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y - camera.y);
-        ctx.lineTo(canvas.width, y - camera.y);
-        ctx.stroke();
-    }
-}
-
 // DRAW MINIMAP TOP-RIGHT
 function drawMinimap() {
     const size = 150;
@@ -154,10 +111,38 @@ function draw() {
     handleMovement();
     updateCamera();
 
-    drawBackground(); // parallax background
-
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
+
+    // PARALLAX BACKGROUND in world space
+    // Far hills
+    ctx.fillStyle = "#113311"; 
+    for (let i = 0; i < MAP_WIDTH; i += 200) {
+        ctx.fillRect(i*0.8, MAP_HEIGHT - 150, 300, 100); // slower movement
+    }
+
+    // Mid trees
+    ctx.fillStyle = "#224422";
+    for (let i = 0; i < MAP_WIDTH; i += 100) {
+        ctx.fillRect(i*0.9, MAP_HEIGHT - 200, 30, 60);
+    }
+
+    // Ground grid
+    const gridSize = 50;
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, MAP_HEIGHT);
+        ctx.stroke();
+    }
+    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(MAP_WIDTH, y);
+        ctx.stroke();
+    }
 
     // Players
     for (let id in players) {
