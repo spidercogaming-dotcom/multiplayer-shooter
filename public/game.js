@@ -12,7 +12,6 @@ let players = {};
 let bullets = [];
 let myId = null;
 let camera = { x: 0, y: 0 };
-
 const keys = { w:false,a:false,s:false,d:false };
 
 socket.on("connect", () => myId = socket.id);
@@ -25,6 +24,14 @@ socket.on("state", (data) => {
         document.getElementById("coins").innerText = players[myId].coins;
         document.getElementById("weapon").innerText = players[myId].weapon;
     }
+
+    // Update leaderboard
+    const sorted = Object.values(players).sort((a,b)=>b.coins - a.coins).slice(0,5);
+    const listDiv = document.getElementById("leaderboardList");
+    listDiv.innerHTML = "";
+    sorted.forEach(p=>{
+        listDiv.innerHTML += `<div>${p.name}: ${p.coins}</div>`;
+    });
 });
 
 socket.on("crateResult", (weapon) => {
@@ -114,39 +121,15 @@ function draw() {
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // PARALLAX BACKGROUND in world space
-    // Far hills
-    ctx.fillStyle = "#113311"; 
-    for (let i = 0; i < MAP_WIDTH; i += 200) {
-        ctx.fillRect(i*0.8, MAP_HEIGHT - 150, 300, 100); // slower movement
-    }
-
-    // Mid trees
-    ctx.fillStyle = "#224422";
-    for (let i = 0; i < MAP_WIDTH; i += 100) {
-        ctx.fillRect(i*0.9, MAP_HEIGHT - 200, 30, 60);
-    }
-
-    // Ground grid
-    const gridSize = 50;
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, MAP_HEIGHT);
-        ctx.stroke();
-    }
-    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(MAP_WIDTH, y);
-        ctx.stroke();
-    }
+    // STATIC BACKGROUND
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
     // Players
     for (let id in players) {
         const p = players[id];
+
+        // Player square
         ctx.fillStyle = id===myId?"lime":"red";
         ctx.fillRect(p.x,p.y,30,30);
 
@@ -155,6 +138,12 @@ function draw() {
         ctx.fillRect(p.x, p.y - 10, 30, 5);
         ctx.fillStyle = "lime";
         ctx.fillRect(p.x, p.y - 10, 30 * (p.hp / 100), 5);
+
+        // Username
+        ctx.fillStyle = "white";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(p.name, p.x + 15, p.y - 15);
     }
 
     // Bullets
