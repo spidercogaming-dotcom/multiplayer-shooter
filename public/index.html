@@ -1,35 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Multiplayer Game</title>
+    <title>Rise of Ikons</title>
+    <style>
+        body {
+            margin:0;
+            overflow:hidden;
+            background:#111;
+            color:white;
+            font-family:Arial;
+        }
+        #hud {
+            position:absolute;
+            top:10px;
+            left:10px;
+            background: rgba(0,0,0,0.5);
+            padding:15px;
+            border-radius:8px;
+        }
+        #shop {
+            display:none;
+            position:absolute;
+            top:150px;
+            left:10px;
+            background:#222;
+            padding:20px;
+            border-radius:8px;
+        }
+        #crateAnimation {
+            display:none;
+            position:fixed;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            background:black;
+            padding:40px;
+            font-size:28px;
+            border:3px solid gold;
+            border-radius:10px;
+        }
+        button {
+            padding:5px 10px;
+            margin:5px 0;
+            cursor:pointer;
+            border-radius:5px;
+            background:#444;
+            color:white;
+            border:none;
+        }
+        button:hover { background:#666; }
+    </style>
 </head>
-<body style="margin:0; overflow:hidden; background:#111; color:white; font-family:Arial;">
+<body>
 
-<div style="position:absolute; top:10px; left:10px;">
-    Coins: <span id="coins">0</span><br>
-    Weapon: <span id="weapon">pistol</span><br><br>
+<div id="hud">
+    <div>HP: <span id="hp">100</span></div>
+    <div>Coins: <span id="coins">0</span></div>
+    <div>Weapon: <span id="weapon">pistol</span></div>
+    <br>
     <button onclick="toggleShop()">Open Shop</button>
 </div>
 
-<div id="shop" style="display:none; position:absolute; top:120px; left:10px; background:#222; padding:20px;">
+<div id="shop">
     <h3>Crates</h3>
-    <button onclick="openCrate('basic')">Basic (10)</button><br><br>
-    <button onclick="openCrate('epic')">Epic (25)</button><br><br>
-    <button onclick="openCrate('legendary')">Legendary (50)</button>
+    <button onclick="openCrate('basic')">Basic (10 coins)</button><br>
+    <button onclick="openCrate('epic')">Epic (25 coins)</button><br>
+    <button onclick="openCrate('legendary')">Legendary (50 coins)</button><br><br>
+    <h3>Buy Items</h3>
+    <button onclick="buyHealth()">Health Pack (+30 HP, 20 coins)</button>
 </div>
 
-<div id="crateAnimation" style="
-display:none;
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:black;
-padding:40px;
-font-size:28px;
-border:3px solid gold;">
-Opening...
-</div>
+<div id="crateAnimation">Opening...</div>
 
 <canvas id="game"></canvas>
 
@@ -38,3 +79,4 @@ Opening...
 
 </body>
 </html>
+
