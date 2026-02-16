@@ -13,12 +13,25 @@ const MAP_HEIGHT = 2000;
 
 let players = {};
 let bullets = [];
+let coins = [];
+let healthPacks = [];
 
 const weapons = {
     pistol: { fireRate: 500, damage: 20 },
     rifle: { fireRate: 250, damage: 15 },
-    testi: { fireRate: 100, damage: 10 }
+    sniper: { fireRate: 800, damage: 50 },
+    laser: { fireRate: 100, damage: 10 }
 };
+
+// Spawn coins and health packs randomly
+function spawnItems() {
+    if (coins.length < 20 && Math.random() < 0.05) {
+        coins.push({ x: Math.random() * MAP_WIDTH, y: Math.random() * MAP_HEIGHT });
+    }
+    if (healthPacks.length < 10 && Math.random() < 0.02) {
+        healthPacks.push({ x: Math.random() * MAP_WIDTH, y: Math.random() * MAP_HEIGHT, value: 30 });
+    }
+}
 
 io.on("connection", (socket) => {
 
@@ -50,7 +63,6 @@ io.on("connection", (socket) => {
         const weapon = weapons[p.weapon];
 
         if (now - p.lastShot < weapon.fireRate) return;
-
         p.lastShot = now;
 
         bullets.push({
@@ -71,31 +83,35 @@ io.on("connection", (socket) => {
         if (type === "basic") cost = 10;
         if (type === "epic") cost = 25;
         if (type === "legendary") cost = 50;
-
         if (p.coins < cost) return;
 
         p.coins -= cost;
-
         const rand = Math.random();
 
         if (type === "basic") {
             if (rand < 0.7) p.weapon = "pistol";
             else if (rand < 0.95) p.weapon = "rifle";
-            else p.weapon = "testi";
-        }
-
-        if (type === "epic") {
+            else p.weapon = "laser";
+        } else if (type === "epic") {
             if (rand < 0.6) p.weapon = "rifle";
-            else if (rand < 0.95) p.weapon = "pistol";
-            else p.weapon = "testi";
-        }
-
-        if (type === "legendary") {
-            if (rand < 0.8) p.weapon = "rifle";
-            else p.weapon = "testi";
+            else if (rand < 0.9) p.weapon = "sniper";
+            else p.weapon = "laser";
+        } else if (type === "legendary") {
+            if (rand < 0.5) p.weapon = "sniper";
+            else p.weapon = "laser";
         }
 
         io.to(socket.id).emit("crateResult", p.weapon);
+    });
+
+    socket.on("buyItem", (item) => {
+        const p = players[socket.id];
+        if (!p) return;
+
+        if (item === "health" && p.coins >= 20) {
+            p.hp = Math.min(100, p.hp + 30);
+            p.coins -= 20;
+        }
     });
 
     socket.on("disconnect", () => {
@@ -104,7 +120,9 @@ io.on("connection", (socket) => {
 });
 
 function gameLoop() {
+    spawnItems();
 
+    // Update bullets
     bullets.forEach((b, index) => {
         b.x += b.vx;
         b.y += b.vy;
@@ -118,12 +136,7 @@ function gameLoop() {
             const p = players[id];
             if (id === b.owner) continue;
 
-            if (
-                b.x > p.x &&
-                b.x < p.x + 30 &&
-                b.y > p.y &&
-                b.y < p.y + 30
-            ) {
+            if (b.x > p.x && b.x < p.x + 30 && b.y > p.y && b.y < p.y + 30) {
                 p.hp -= b.damage;
 
                 if (p.hp <= 0) {
@@ -131,9 +144,7 @@ function gameLoop() {
                     p.x = 1000;
                     p.y = 1000;
 
-                    if (players[b.owner]) {
-                        players[b.owner].coins += 20;
-                    }
+                    if (players[b.owner]) players[b.owner].coins += 20;
                 }
 
                 bullets.splice(index, 1);
@@ -141,9 +152,10 @@ function gameLoop() {
         }
     });
 
-    io.emit("state", { players, bullets });
+    io.emit("state", { players, bullets, coins, healthPacks });
 }
 
 setInterval(gameLoop, 1000 / 60);
 
 server.listen(3000, () => console.log("Server running"));
+
