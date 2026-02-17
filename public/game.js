@@ -14,18 +14,42 @@ let myId = null;
 let camera = { x: 0, y: 0 };
 const keys = { w:false,a:false,s:false,d:false };
 
+// Track if username is set
+let usernameSet = false;
+
 socket.on("connect", () => myId = socket.id);
 
+// ================= Username Setup =================
+function submitUsername() {
+    const input = document.getElementById("usernameInput");
+    const name = input.value.trim();
+    if (!name) return;
+
+    socket.emit("setUsername", name);
+}
+
+socket.on("usernameDenied", () => {
+    document.getElementById("usernameError").innerText = "Username already taken!";
+});
+
+socket.on("usernameAccepted", (name) => {
+    usernameSet = true;
+    document.getElementById("usernameDiv").style.display = "none";
+});
+
+// ================= Game State =================
 socket.on("state", (data) => {
     players = data.players;
     bullets = data.bullets;
+
+    if (!usernameSet) return;
 
     if (players[myId]) {
         document.getElementById("coins").innerText = players[myId].coins;
         document.getElementById("weapon").innerText = players[myId].weapon;
     }
 
-    // Update leaderboard
+    // Update leaderboard (top 5)
     const sorted = Object.values(players)
         .sort((a,b)=>b.coins - a.coins)
         .slice(0,5);
@@ -36,6 +60,7 @@ socket.on("state", (data) => {
     });
 });
 
+// Crate animations
 socket.on("crateResult", (weapon) => {
     const box = document.getElementById("crateAnimation");
     box.innerText = "You got: " + weapon + "!";
@@ -50,6 +75,7 @@ socket.on("crateDenied", () => {
     setTimeout(() => box.style.display = "none", 800);
 });
 
+// ================= Controls =================
 function toggleShop() {
     const shop = document.getElementById("shop");
     shop.style.display = shop.style.display === "none" ? "block" : "none";
@@ -63,6 +89,7 @@ document.addEventListener("keydown", e => { if (e.key in keys) keys[e.key] = tru
 document.addEventListener("keyup", e => { if (e.key in keys) keys[e.key] = false; });
 
 canvas.addEventListener("click", (e) => {
+    if (!usernameSet) return;
     const me = players[myId];
     if (!me) return;
 
@@ -74,7 +101,9 @@ canvas.addEventListener("click", (e) => {
     socket.emit("shoot", { angle });
 });
 
+// Movement
 function handleMovement() {
+    if (!usernameSet) return;
     const speed = 5;
     let dx=0, dy=0;
     if (keys.w) dy -= speed;
@@ -84,7 +113,9 @@ function handleMovement() {
     if (dx || dy) socket.emit("move", { dx, dy });
 }
 
+// Camera
 function updateCamera() {
+    if (!usernameSet) return;
     const me = players[myId];
     if (!me) return;
 
@@ -97,6 +128,7 @@ function updateCamera() {
 
 // Minimap top-right
 function drawMinimap() {
+    if (!usernameSet) return;
     const size = 150;
     const scaleX = size / MAP_WIDTH;
     const scaleY = size / MAP_HEIGHT;
@@ -114,6 +146,7 @@ function drawMinimap() {
     }
 }
 
+// ================= Draw Loop =================
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -123,15 +156,15 @@ function draw() {
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // Static background
+    // Background
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
-    // Draw players
+    // Players
     for (let id in players) {
         const p = players[id];
 
-        // Player square
+        // Square
         ctx.fillStyle = id===myId?"lime":"red";
         ctx.fillRect(p.x,p.y,30,30);
 
@@ -148,7 +181,7 @@ function draw() {
         ctx.fillText(p.name, p.x + 15, p.y - 15);
     }
 
-    // Draw bullets
+    // Bullets
     bullets.forEach(b=>{
         ctx.fillStyle="yellow";
         ctx.fillRect(b.x,b.y,5,5);
