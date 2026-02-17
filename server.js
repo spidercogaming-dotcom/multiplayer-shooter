@@ -17,21 +17,34 @@ let bullets = [];
 const weapons = {
     pistol: { fireRate: 500, damage: 20 },
     rifle: { fireRate: 250, damage: 15 },
-    sniper: { fireRate: 800, damage: 50 },
-    laser: { fireRate: 100, damage: 10 }
+    testi: { fireRate: 100, damage: 10 }
 };
 
+// Connection
 io.on("connection", (socket) => {
 
+    // Assign default username
+    let username = "Player" + Math.floor(Math.random() * 1000);
+
+    // Listen for client setting username
+    socket.on("setUsername", (name) => {
+        name = name || username;
+        username = name;
+        if (players[socket.id]) players[socket.id].name = username;
+    });
+
+    // Initialize player
     players[socket.id] = {
         x: 1000,
         y: 1000,
         hp: 100,
         coins: 10,
         weapon: "pistol",
-        lastShot: 0
+        lastShot: 0,
+        name: username
     };
 
+    // Movement
     socket.on("move", ({ dx, dy }) => {
         const p = players[socket.id];
         if (!p) return;
@@ -43,6 +56,7 @@ io.on("connection", (socket) => {
         p.y = Math.max(0, Math.min(p.y, MAP_HEIGHT - 30));
     });
 
+    // Shooting
     socket.on("shoot", ({ angle }) => {
         const p = players[socket.id];
         if (!p) return;
@@ -63,6 +77,7 @@ io.on("connection", (socket) => {
         });
     });
 
+    // Open crate
     socket.on("openCrate", (type) => {
         const p = players[socket.id];
         if (!p) return;
@@ -72,36 +87,42 @@ io.on("connection", (socket) => {
         if (type === "epic") cost = 25;
         if (type === "legendary") cost = 50;
 
-        // Server enforces coins
         if (p.coins < cost) {
-            io.to(socket.id).emit("crateDenied");
+            socket.emit("crateDenied");
             return;
         }
 
         p.coins -= cost;
 
         const rand = Math.random();
+
         if (type === "basic") {
             if (rand < 0.7) p.weapon = "pistol";
             else if (rand < 0.95) p.weapon = "rifle";
-            else p.weapon = "laser";
-        } else if (type === "epic") {
-            if (rand < 0.6) p.weapon = "rifle";
-            else if (rand < 0.9) p.weapon = "sniper";
-            else p.weapon = "laser";
-        } else if (type === "legendary") {
-            if (rand < 0.5) p.weapon = "sniper";
-            else p.weapon = "laser";
+            else p.weapon = "testi";
         }
 
-        io.to(socket.id).emit("crateResult", p.weapon);
+        if (type === "epic") {
+            if (rand < 0.6) p.weapon = "rifle";
+            else if (rand < 0.95) p.weapon = "pistol";
+            else p.weapon = "testi";
+        }
+
+        if (type === "legendary") {
+            if (rand < 0.8) p.weapon = "rifle";
+            else p.weapon = "testi";
+        }
+
+        socket.emit("crateResult", p.weapon);
     });
 
+    // Disconnect
     socket.on("disconnect", () => {
         delete players[socket.id];
     });
 });
 
+// Game loop
 function gameLoop() {
     bullets.forEach((b, index) => {
         b.x += b.vx;
