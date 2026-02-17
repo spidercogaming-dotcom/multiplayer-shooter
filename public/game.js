@@ -13,9 +13,9 @@ let bullets = [];
 let myId = null;
 let camera = { x: 0, y: 0 };
 const keys = { w:false,a:false,s:false,d:false };
-
-// Track if username is set
 let usernameSet = false;
+
+let lightning = 0; // for flash effect
 
 socket.on("connect", () => myId = socket.id);
 
@@ -126,7 +126,42 @@ function updateCamera() {
     camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT - canvas.height));
 }
 
-// Minimap top-right
+// ================= Background =================
+function drawBackground() {
+    // Stormy gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT);
+    grad.addColorStop(0, "#111");
+    grad.addColorStop(1, "#222");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+
+    // Grid overlay
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.lineWidth = 1;
+    const gridSize = 100;
+    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, MAP_HEIGHT);
+        ctx.stroke();
+    }
+    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(MAP_WIDTH, y);
+        ctx.stroke();
+    }
+
+    // Lightning flash
+    if (Math.random() < 0.002 && lightning === 0) lightning = 5;
+    if (lightning > 0) {
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+        lightning--;
+    }
+}
+
+// ================= Minimap =================
 function drawMinimap() {
     if (!usernameSet) return;
     const size = 150;
@@ -156,15 +191,12 @@ function draw() {
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    // Background
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+    drawBackground();
 
     // Players
     for (let id in players) {
         const p = players[id];
 
-        // Square
         ctx.fillStyle = id===myId?"lime":"red";
         ctx.fillRect(p.x,p.y,30,30);
 
