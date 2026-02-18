@@ -1,4 +1,4 @@
-const socket = io(); // IMPORTANT for Render
+const socket = io();
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -29,7 +29,9 @@ socket.on("state", (serverState) => {
 });
 
 socket.on("crateResult", (weapon) => {
-    alert("You got: " + weapon);
+    const anim = document.getElementById("crateAnimation");
+    anim.innerText = "You got: " + weapon + "!";
+    setTimeout(() => anim.style.display = "none", 1500);
 });
 
 socket.on("crateDenied", () => {
@@ -62,6 +64,9 @@ function toggleShop() {
 }
 
 function openCrate(type) {
+    const anim = document.getElementById("crateAnimation");
+    anim.style.display = "block";
+    anim.innerText = "Opening...";
     socket.emit("openCrate", type);
 }
 
@@ -69,12 +74,15 @@ function update() {
     let dx = 0;
     let dy = 0;
 
-    if (keys["w"]) dy -= 5;
-    if (keys["s"]) dy += 5;
-    if (keys["a"]) dx -= 5;
-    if (keys["d"]) dx += 5;
+    if (keys["w"] || keys["W"]) dy -= 1;
+    if (keys["s"] || keys["S"]) dy += 1;
+    if (keys["a"] || keys["A"]) dx -= 1;
+    if (keys["d"] || keys["D"]) dx += 1;
 
     if (dx !== 0 || dy !== 0) {
+        const length = Math.sqrt(dx * dx + dy * dy);
+        dx = (dx / length) * 5;
+        dy = (dy / length) * 5;
         socket.emit("move", { dx, dy });
     }
 }
@@ -90,7 +98,6 @@ function draw() {
 
     for (let id in state.players) {
         const p = state.players[id];
-
         ctx.fillStyle = id === myId ? "lime" : "red";
         ctx.fillRect(p.x - camX, p.y - camY, 30, 30);
     }
@@ -99,6 +106,28 @@ function draw() {
         ctx.fillStyle = "yellow";
         ctx.fillRect(b.x - camX, b.y - camY, 5, 5);
     });
+
+    // === MINIMAP ===
+    const miniSize = 200;
+    const padding = 20;
+
+    const miniX = canvas.width - miniSize - padding;
+    const miniY = padding;
+
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(miniX, miniY, miniSize, miniSize);
+
+    for (let id in state.players) {
+        const p = state.players[id];
+        const mx = miniX + (p.x / 2000) * miniSize;
+        const my = miniY + (p.y / 2000) * miniSize;
+
+        ctx.fillStyle = id === myId ? "lime" : "red";
+        ctx.fillRect(mx, my, 5, 5);
+    }
+
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(miniX, miniY, miniSize, miniSize);
 }
 
 function gameLoop() {
