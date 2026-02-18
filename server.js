@@ -10,28 +10,28 @@ app.use(express.static("public"));
 const PORT = process.env.PORT || 3000;
 const MAP_WIDTH = 3000;
 const MAP_HEIGHT = 3000;
-const MAX_NAME_LENGTH = 16;
 
 let players = {};
+let bullets = [];
 
 io.on("connection", (socket) => {
 
     socket.on("joinGame", (username) => {
 
-        if (typeof username !== "string") username = "Player";
-        username = username.trim();
+        username = typeof username === "string" ? username.trim() : "Player";
         if (username.length === 0) username = "Player";
-        if (username.length > MAX_NAME_LENGTH)
-            username = username.substring(0, MAX_NAME_LENGTH);
-
+        username = username.substring(0, 16);
         username = username.replace(/[^a-zA-Z0-9_ ]/g, "");
 
         players[socket.id] = {
             x: 1500,
             y: 1500,
             speed: 5,
-            name: username,
-            lastNameChange: 0
+            hp: 100,
+            coins: 0,
+            weapon: "pistol",
+            lastShot: 0,
+            name: username
         };
     });
 
@@ -46,22 +46,35 @@ io.on("connection", (socket) => {
         p.y = Math.max(0, Math.min(MAP_HEIGHT, p.y));
     });
 
-    socket.on("setUsername", (newName) => {
+    socket.on("shoot", (angle) => {
         const p = players[socket.id];
         if (!p) return;
 
         const now = Date.now();
-        if (now - p.lastNameChange < 5000) return;
 
-        if (typeof newName !== "string") return;
+        const fireRate = p.weapon === "rifle" ? 150 : 400;
+        if (now - p.lastShot < fireRate) return;
 
-        newName = newName.trim();
-        if (newName.length === 0 || newName.length > MAX_NAME_LENGTH) return;
+        p.lastShot = now;
 
-        newName = newName.replace(/[^a-zA-Z0-9_ ]/g, "");
+        bullets.push({
+            x: p.x,
+            y: p.y,
+            angle,
+            speed: 12,
+            owner: socket.id,
+            damage: p.weapon === "rifle" ? 15 : 25
+        });
+    });
 
-        p.name = newName;
-        p.lastNameChange = now;
+    socket.on("buyWeapon", (weapon) => {
+        const p = players[socket.id];
+        if (!p) return;
+
+        if (weapon === "rifle" && p.coins >= 100) {
+            p.weapon = "rifle";
+            p.coins -= 100;
+        }
     });
 
     socket.on("disconnect", () => {
@@ -69,9 +82,44 @@ io.on("connection", (socket) => {
     });
 });
 
-setInterval(() => {
-    io.volatile.emit("state", { players });
-}, 1000 / 30);
+function updateGame() {
+
+    bullets.forEach((b, index) => {
+        b.x += Math.cos(b.angle) * b.speed;
+        b.y += Math.sin(b.angle) * b.speed;
+
+        if (b.x < 0 || b.x > MAP_WIDTH || b.y < 0 || b.y > MAP_HEIGHT) {
+            bullets.splice(index, 1);
+            return;
+        }
+
+        for (let id in players) {
+            if (id === b.owner) continue;
+
+            const p = players[id];
+            const dx = p.x - b.x;
+            const dy = p.y - b.y;
+
+            if (Math.sqrt(dx * dx + dy * dy) < 20) {
+                p.hp -= b.damage;
+                bullets.splice(index, 1);
+
+                if (p.hp <= 0) {
+                    players[b.owner].coins += 50;
+                    p.hp = 100;
+                    p.x = 1500;
+                    p.y = 1500;
+                }
+
+                break;
+            }
+        }
+    });
+
+    io.volatile.emit("state", { players, bullets });
+}
+
+setInterval(updateGame, 1000 / 30);
 
 server.listen(PORT, () => {
     console.log("Rise of Ikon running on port " + PORT);
