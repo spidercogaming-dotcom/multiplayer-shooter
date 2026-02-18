@@ -1,36 +1,107 @@
-let lightning = 0; // 0 = no flash, >0 = flash duration
+const socket = io();
 
-function drawBackground() {
-    // Stormy gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT);
-    grad.addColorStop(0, "#111"); // top
-    grad.addColorStop(1, "#222"); // bottom
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    // Grid overlay
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
-    ctx.lineWidth = 1;
-    const gridSize = 100;
-    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, MAP_HEIGHT);
-        ctx.stroke();
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+let state = { players: {}, bullets: {} };
+let myId = null;
+
+socket.on("connect", () => {
+    myId = socket.id;
+});
+
+socket.on("state", (serverState) => {
+    state = serverState;
+
+    if (state.players[myId]) {
+        document.getElementById("hp").innerText = state.players[myId].hp;
+        document.getElementById("coins").innerText = state.players[myId].coins;
+        document.getElementById("weapon").innerText = state.players[myId].weapon;
     }
-    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(MAP_WIDTH, y);
-        ctx.stroke();
-    }
+});
 
-    // Lightning effect
-    if (Math.random() < 0.002 && lightning === 0) lightning = 5; // random flash
-    if (lightning > 0) {
-        ctx.fillStyle = "rgba(255,255,255,0.3)";
-        ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-        lightning--;
+socket.on("crateResult", (weapon) => {
+    alert("You got: " + weapon);
+});
+
+socket.on("crateDenied", () => {
+    alert("Not enough coins!");
+});
+
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+canvas.addEventListener("click", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const me = state.players[myId];
+    if (!me) return;
+
+    const angle = Math.atan2(y - canvas.height / 2, x - canvas.width / 2);
+    socket.emit("shoot", { angle });
+});
+
+function toggleShop() {
+    const shop = document.getElementById("shop");
+    shop.style.display = shop.style.display === "none" ? "block" : "none";
+}
+
+function openCrate(type) {
+    socket.emit("openCrate", type);
+}
+
+function update() {
+    let dx = 0;
+    let dy = 0;
+
+    if (keys["w"]) dy -= 5;
+    if (keys["s"]) dy += 5;
+    if (keys["a"]) dx -= 5;
+    if (keys["d"]) dx += 5;
+
+    if (dx !== 0 || dy !== 0) {
+        socket.emit("move", { dx, dy });
     }
 }
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const me = state.players[myId];
+    if (!me) return;
+
+    const camX = me.x - canvas.width / 2;
+    const camY = me.y - canvas.height / 2;
+
+    for (let id in state.players) {
+        const p = state.players[id];
+
+        ctx.fillStyle = id === myId ? "lime" : "red";
+        ctx.fillRect(p.x - camX, p.y - camY, 30, 30);
+    }
+
+    state.bullets.forEach(b => {
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(b.x - camX, b.y - camY, 5, 5);
+    });
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
 
