@@ -66,12 +66,7 @@ io.on("connection", (socket) => {
         const p = players[socket.id];
         if (!p) return;
 
-        const costs = {
-            basic: 10,
-            epic: 25,
-            legendary: 50
-        };
-
+        const costs = { basic: 10, epic: 25, legendary: 50 };
         const cost = costs[type] || 0;
 
         if (p.coins < cost) {
@@ -80,6 +75,7 @@ io.on("connection", (socket) => {
         }
 
         p.coins -= cost;
+
         const rand = Math.random();
 
         if (type === "basic") {
@@ -159,4 +155,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log("Server running on port " + PORT);
 });
+
 
