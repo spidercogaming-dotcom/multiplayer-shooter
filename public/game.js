@@ -1,5 +1,4 @@
 const socket = io();
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -10,19 +9,28 @@ const MAP_WIDTH = 3000;
 const MAP_HEIGHT = 3000;
 
 let players = {};
+let bullets = {};
 let myId = null;
 let joined = false;
-
 let keys = {};
 
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-function startGame() {
-    const input = document.getElementById("startName");
-    let name = input.value.trim();
-    if (name.length === 0) name = "Player";
+canvas.addEventListener("click", (e) => {
+    if (!players[myId]) return;
 
+    const me = players[myId];
+    const angle = Math.atan2(
+        e.clientY - canvas.height / 2,
+        e.clientX - canvas.width / 2
+    );
+
+    socket.emit("shoot", angle);
+});
+
+function startGame() {
+    const name = document.getElementById("startName").value.trim() || "Player";
     socket.emit("joinGame", name);
 
     document.getElementById("menu").style.display = "none";
@@ -32,11 +40,8 @@ function startGame() {
     joined = true;
 }
 
-function changeName() {
-    const input = document.getElementById("usernameInput");
-    const name = input.value.trim();
-    if (name.length === 0) return;
-    socket.emit("setUsername", name);
+function buyRifle() {
+    socket.emit("buyWeapon", "rifle");
 }
 
 socket.on("connect", () => {
@@ -45,6 +50,7 @@ socket.on("connect", () => {
 
 socket.on("state", data => {
     players = data.players;
+    bullets = data.bullets;
 });
 
 function update() {
@@ -58,9 +64,7 @@ function update() {
     if (keys["a"] || keys["ArrowLeft"]) dx -= 1;
     if (keys["d"] || keys["ArrowRight"]) dx += 1;
 
-    if (dx !== 0 || dy !== 0) {
-        socket.emit("move", { dx, dy });
-    }
+    if (dx || dy) socket.emit("move", { dx, dy });
 }
 
 function drawBackground(camX, camY) {
@@ -68,18 +72,13 @@ function drawBackground(camX, camY) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-
-    const gridSize = 100;
-
-    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
+    for (let x = 0; x < MAP_WIDTH; x += 100) {
         ctx.beginPath();
         ctx.moveTo(x - camX, -camY);
         ctx.lineTo(x - camX, MAP_HEIGHT - camY);
         ctx.stroke();
     }
-
-    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
+    for (let y = 0; y < MAP_HEIGHT; y += 100) {
         ctx.beginPath();
         ctx.moveTo(-camX, y - camY);
         ctx.lineTo(MAP_WIDTH - camX, y - camY);
@@ -90,36 +89,44 @@ function drawBackground(camX, camY) {
 function draw() {
     if (!joined || !players[myId]) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     const me = players[myId];
     const camX = me.x - canvas.width / 2;
     const camY = me.y - canvas.height / 2;
 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackground(camX, camY);
 
     for (let id in players) {
         const p = players[id];
-
-        const drawX = p.x - camX;
-        const drawY = p.y - camY;
+        const x = p.x - camX;
+        const y = p.y - camY;
 
         ctx.fillStyle = id === myId ? "lime" : "red";
-        ctx.fillRect(drawX, drawY, 30, 30);
+        ctx.fillRect(x - 15, y - 15, 30, 30);
 
-        // USERNAME ABOVE PLAYER
         ctx.fillStyle = "white";
-        ctx.font = "14px Arial";
         ctx.textAlign = "center";
-        ctx.fillText(p.name, drawX + 15, drawY - 8);
+        ctx.fillText(p.name, x, y - 25);
+        ctx.fillText("HP: " + p.hp, x, y + 30);
     }
+
+    bullets.forEach(b => {
+        ctx.fillStyle = "yellow";
+        ctx.beginPath();
+        ctx.arc(b.x - camX, b.y - camY, 5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.fillStyle = "white";
+    ctx.fillText("Coins: " + me.coins, 100, 30);
+    ctx.fillText("Weapon: " + me.weapon, 100, 50);
 }
 
-function gameLoop() {
+function loop() {
     update();
     draw();
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
 }
 
-gameLoop();
+loop();
 
