@@ -1,16 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Storm Arena</title>
+    <title>Rise of Ikon</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background: black;
+            font-family: Arial;
         }
 
         canvas {
-            display: block;
+            display: none;
+        }
+
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+        }
+
+        #menu input {
+            padding: 10px;
+            width: 200px;
+            margin-bottom: 10px;
+        }
+
+        #menu button {
+            padding: 10px 20px;
+            cursor: pointer;
         }
 
         #sidePanel {
@@ -21,7 +42,7 @@
             padding: 15px;
             border-radius: 10px;
             color: white;
-            font-family: Arial;
+            display: none;
         }
 
         #sidePanel input {
@@ -39,9 +60,16 @@
 </head>
 <body>
 
+<div id="menu">
+    <h1>Rise of Ikon</h1>
+    <input id="startName" maxlength="16" placeholder="Enter username">
+    <br>
+    <button onclick="startGame()">PLAY</button>
+</div>
+
 <div id="sidePanel">
-    <div><b>Change Username</b></div>
-    <input id="usernameInput" maxlength="16" placeholder="Enter name">
+    <b>Change Username</b><br>
+    <input id="usernameInput" maxlength="16">
     <button onclick="changeName()">Set Name</button>
 </div>
 
