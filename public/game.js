@@ -11,19 +11,26 @@ const MAP_HEIGHT = 3000;
 
 let players = {};
 let myId = null;
+let joined = false;
 
 let keys = {};
 
-document.addEventListener("keydown", (e) => keys[e.key] = true);
-document.addEventListener("keyup", (e) => keys[e.key] = false);
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-socket.on("connect", () => {
-    myId = socket.id;
-});
+function startGame() {
+    const input = document.getElementById("startName");
+    let name = input.value.trim();
+    if (name.length === 0) name = "Player";
 
-socket.on("state", (data) => {
-    players = data.players;
-});
+    socket.emit("joinGame", name);
+
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("sidePanel").style.display = "block";
+    canvas.style.display = "block";
+
+    joined = true;
+}
 
 function changeName() {
     const input = document.getElementById("usernameInput");
@@ -32,7 +39,17 @@ function changeName() {
     socket.emit("setUsername", name);
 }
 
+socket.on("connect", () => {
+    myId = socket.id;
+});
+
+socket.on("state", data => {
+    players = data.players;
+});
+
 function update() {
+    if (!joined) return;
+
     let dx = 0;
     let dy = 0;
 
@@ -46,25 +63,40 @@ function update() {
     }
 }
 
-function drawBackground() {
-    const grad = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT);
-    grad.addColorStop(0, "#111");
-    grad.addColorStop(1, "#222");
-    ctx.fillStyle = grad;
+function drawBackground(camX, camY) {
+    ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+
+    const gridSize = 100;
+
+    for (let x = 0; x <= MAP_WIDTH; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x - camX, -camY);
+        ctx.lineTo(x - camX, MAP_HEIGHT - camY);
+        ctx.stroke();
+    }
+
+    for (let y = 0; y <= MAP_HEIGHT; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(-camX, y - camY);
+        ctx.lineTo(MAP_WIDTH - camX, y - camY);
+        ctx.stroke();
+    }
 }
 
 function draw() {
+    if (!joined || !players[myId]) return;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!players[myId]) return;
-
     const me = players[myId];
-
     const camX = me.x - canvas.width / 2;
     const camY = me.y - canvas.height / 2;
 
-    drawBackground();
+    drawBackground(camX, camY);
 
     for (let id in players) {
         const p = players[id];
@@ -75,10 +107,11 @@ function draw() {
         ctx.fillStyle = id === myId ? "lime" : "red";
         ctx.fillRect(drawX, drawY, 30, 30);
 
+        // USERNAME ABOVE PLAYER
         ctx.fillStyle = "white";
         ctx.font = "14px Arial";
         ctx.textAlign = "center";
-        ctx.fillText(p.name, drawX + 15, drawY - 5);
+        ctx.fillText(p.name, drawX + 15, drawY - 8);
     }
 }
 
