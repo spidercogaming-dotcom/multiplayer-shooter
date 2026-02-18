@@ -2,18 +2,20 @@
 <html>
 <head>
     <title>Rise of Ikon</title>
+    <meta charset="UTF-8">
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background: black;
-            font-family: Arial;
+            background: #000;
+            font-family: Arial, sans-serif;
         }
 
         canvas {
             display: none;
         }
 
+        /* MAIN MENU */
         #menu {
             position: absolute;
             top: 50%;
@@ -23,60 +25,93 @@
             color: white;
         }
 
+        #menu h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
         #menu input {
             padding: 10px;
-            width: 200px;
+            width: 220px;
             margin-bottom: 10px;
+            font-size: 16px;
+            text-align: center;
         }
 
         #menu button {
-            padding: 10px 20px;
+            padding: 10px 25px;
+            font-size: 16px;
             cursor: pointer;
         }
 
+        /* SIDE PANEL */
         #sidePanel {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.7);
+            width: 200px;
+            background: rgba(0,0,0,0.8);
             padding: 15px;
             border-radius: 10px;
             color: white;
             display: none;
         }
 
+        #sidePanel h3 {
+            margin-top: 0;
+        }
+
         #sidePanel input {
-            width: 140px;
-            padding: 5px;
-            margin-bottom: 5px;
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
 
         #sidePanel button {
             width: 100%;
-            padding: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
             cursor: pointer;
+            font-size: 14px;
+        }
+
+        #sidePanel hr {
+            border: 0;
+            border-top: 1px solid #444;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
 
-<div id="menu">
-    <h1>Rise of Ikon</h1>
-    <input id="startName" maxlength="16" placeholder="Enter username">
-    <br>
-    <button onclick="startGame()">PLAY</button>
-</div>
+    <!-- MENU -->
+    <div id="menu">
+        <h1>Rise of Ikon</h1>
+        <input id="startName" maxlength="16" placeholder="Enter Username">
+        <br>
+        <button onclick="startGame()">PLAY</button>
+    </div>
 
-<div id="sidePanel">
-    <b>Change Username</b><br>
-    <input id="usernameInput" maxlength="16">
-    <button onclick="changeName()">Set Name</button>
-</div>
+    <!-- SIDE PANEL (SHOP + USER SETTINGS) -->
+    <div id="sidePanel">
+        <h3>Player Menu</h3>
 
-<canvas id="game"></canvas>
+        <input id="usernameInput" maxlength="16" placeholder="New Username">
+        <button onclick="changeName()">Change Name</button>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="game.js"></script>
+        <hr>
+
+        <button onclick="buyRifle()">Buy Rifle (100 Coins)</button>
+    </div>
+
+    <!-- GAME CANVAS -->
+    <canvas id="game"></canvas>
+
+    <!-- SOCKET.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+
 </body>
 </html>
 
