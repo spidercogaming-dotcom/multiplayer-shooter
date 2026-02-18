@@ -1,17 +1,16 @@
-const socket = io();
+const socket = io(); // IMPORTANT for Render
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-window.addEventListener("resize", () => {
+function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-});
+}
+resize();
+window.addEventListener("resize", resize);
 
-let state = { players: {}, bullets: {} };
+let state = { players: {}, bullets: [] };
 let myId = null;
 
 socket.on("connect", () => {
@@ -21,10 +20,11 @@ socket.on("connect", () => {
 socket.on("state", (serverState) => {
     state = serverState;
 
-    if (state.players[myId]) {
-        document.getElementById("hp").innerText = state.players[myId].hp;
-        document.getElementById("coins").innerText = state.players[myId].coins;
-        document.getElementById("weapon").innerText = state.players[myId].weapon;
+    const me = state.players[myId];
+    if (me) {
+        document.getElementById("hp").innerText = me.hp;
+        document.getElementById("coins").innerText = me.coins;
+        document.getElementById("weapon").innerText = me.weapon;
     }
 });
 
@@ -41,14 +41,18 @@ document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
 canvas.addEventListener("click", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
     const me = state.players[myId];
     if (!me) return;
 
-    const angle = Math.atan2(y - canvas.height / 2, x - canvas.width / 2);
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const angle = Math.atan2(
+        mouseY - canvas.height / 2,
+        mouseX - canvas.width / 2
+    );
+
     socket.emit("shoot", { angle });
 });
 
