@@ -148,12 +148,13 @@ function gameLoop() {
     io.emit("state", { players, bullets });
 }
 
-setInterval(gameLoop, 1000 / 60);
+setInterval(gameLoop, 1000 / 30);
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
     console.log("Server running on port " + PORT);
 });
+
 
 
