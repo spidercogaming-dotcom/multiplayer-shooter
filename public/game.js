@@ -1,3 +1,5 @@
+console.log("NEW GAME.JS LOADED");
+
 const socket = io();
 
 const canvas = document.getElementById("game");
@@ -137,4 +139,5 @@ function gameLoop() {
 }
 
 gameLoop();
+
 
