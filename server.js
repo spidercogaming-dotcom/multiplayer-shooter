@@ -8,24 +8,32 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
-
 const MAP_WIDTH = 3000;
 const MAP_HEIGHT = 3000;
 const MAX_NAME_LENGTH = 16;
 
 let players = {};
-let bullets = [];
 
 io.on("connection", (socket) => {
-    console.log("Player connected:", socket.id);
 
-    players[socket.id] = {
-        x: 1500,
-        y: 1500,
-        speed: 5,
-        name: "Player" + Math.floor(Math.random() * 1000),
-        lastNameChange: 0
-    };
+    socket.on("joinGame", (username) => {
+
+        if (typeof username !== "string") username = "Player";
+        username = username.trim();
+        if (username.length === 0) username = "Player";
+        if (username.length > MAX_NAME_LENGTH)
+            username = username.substring(0, MAX_NAME_LENGTH);
+
+        username = username.replace(/[^a-zA-Z0-9_ ]/g, "");
+
+        players[socket.id] = {
+            x: 1500,
+            y: 1500,
+            speed: 5,
+            name: username,
+            lastNameChange: 0
+        };
+    });
 
     socket.on("move", (data) => {
         const p = players[socket.id];
@@ -66,6 +74,6 @@ setInterval(() => {
 }, 1000 / 30);
 
 server.listen(PORT, () => {
-    console.log("Server running on port " + PORT);
+    console.log("Rise of Ikon running on port " + PORT);
 });
 
