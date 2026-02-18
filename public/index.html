@@ -1,52 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rise of Ikons</title>
+    <title>Storm Arena</title>
     <style>
-        body {margin:0; overflow:hidden; background:#111; color:white; font-family:Arial;}
-        #hud {position:absolute; top:10px; left:10px; background: rgba(0,0,0,0.5); padding:15px; border-radius:8px;}
-        #shop {display:none; position:absolute; top:150px; left:10px; background:#222; padding:20px; border-radius:8px;}
-        #crateAnimation {
-            display:none;
-            position:fixed;
-            top:50%;
-            left:50%;
-            transform:translate(-50%,-50%);
-            background:black;
-            padding:40px;
-            font-size:28px;
-            border:3px solid gold;
-            border-radius:10px;
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
         }
-        button {padding:5px 10px; margin:5px 0; cursor:pointer; border-radius:5px; background:#444; color:white; border:none;}
-        button:hover { background:#666; }
-        canvas { display:block; }
+
+        canvas {
+            display: block;
+        }
+
+        #sidePanel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-family: Arial;
+        }
+
+        #sidePanel input {
+            width: 140px;
+            padding: 5px;
+            margin-bottom: 5px;
+        }
+
+        #sidePanel button {
+            width: 100%;
+            padding: 6px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-<div id="hud">
-    <div>HP: <span id="hp">100</span></div>
-    <div>Coins: <span id="coins">0</span></div>
-    <div>Weapon: <span id="weapon">pistol</span></div>
-    <br>
-    <button onclick="toggleShop()">Open Shop</button>
+<div id="sidePanel">
+    <div><b>Change Username</b></div>
+    <input id="usernameInput" maxlength="16" placeholder="Enter name">
+    <button onclick="changeName()">Set Name</button>
 </div>
-
-<div id="shop">
-    <h3>Crates</h3>
-    <button onclick="openCrate('basic')">Basic (10 coins)</button><br>
-    <button onclick="openCrate('epic')">Epic (25 coins)</button><br>
-    <button onclick="openCrate('legendary')">Legendary (50 coins)</button>
-</div>
-
-<div id="crateAnimation">Opening...</div>
 
 <canvas id="game"></canvas>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
-
 </body>
 </html>
 
