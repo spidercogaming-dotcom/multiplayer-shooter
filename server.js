@@ -22,16 +22,13 @@ const weapons = {
 
 io.on("connection", (socket) => {
 
-    let username = "Player" + Math.floor(Math.random() * 1000);
-
     players[socket.id] = {
         x: 1000,
         y: 1000,
         hp: 100,
         coins: 10,
         weapon: "pistol",
-        lastShot: 0,
-        name: username
+        lastShot: 0
     };
 
     socket.on("move", ({ dx, dy }) => {
@@ -49,8 +46,8 @@ io.on("connection", (socket) => {
         const p = players[socket.id];
         if (!p) return;
 
-        const now = Date.now();
         const weapon = weapons[p.weapon];
+        const now = Date.now();
 
         if (now - p.lastShot < weapon.fireRate) return;
         p.lastShot = now;
@@ -69,10 +66,13 @@ io.on("connection", (socket) => {
         const p = players[socket.id];
         if (!p) return;
 
-        let cost = 0;
-        if (type === "basic") cost = 10;
-        if (type === "epic") cost = 25;
-        if (type === "legendary") cost = 50;
+        const costs = {
+            basic: 10,
+            epic: 25,
+            legendary: 50
+        };
+
+        const cost = costs[type] || 0;
 
         if (p.coins < cost) {
             socket.emit("crateDenied");
@@ -80,7 +80,6 @@ io.on("connection", (socket) => {
         }
 
         p.coins -= cost;
-
         const rand = Math.random();
 
         if (type === "basic") {
@@ -155,5 +154,9 @@ function gameLoop() {
 
 setInterval(gameLoop, 1000 / 60);
 
-server.listen(3000, () => console.log("Server running on http://localhost:3000"));
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log("Server running on port " + PORT);
+});
 
