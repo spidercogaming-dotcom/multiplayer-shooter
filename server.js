@@ -20,20 +20,10 @@ const weapons = {
     testi: { fireRate: 100, damage: 10 }
 };
 
-// Connection
 io.on("connection", (socket) => {
 
-    // Assign default username
     let username = "Player" + Math.floor(Math.random() * 1000);
 
-    // Listen for client setting username
-    socket.on("setUsername", (name) => {
-        name = name || username;
-        username = name;
-        if (players[socket.id]) players[socket.id].name = username;
-    });
-
-    // Initialize player
     players[socket.id] = {
         x: 1000,
         y: 1000,
@@ -44,7 +34,6 @@ io.on("connection", (socket) => {
         name: username
     };
 
-    // Movement
     socket.on("move", ({ dx, dy }) => {
         const p = players[socket.id];
         if (!p) return;
@@ -56,7 +45,6 @@ io.on("connection", (socket) => {
         p.y = Math.max(0, Math.min(p.y, MAP_HEIGHT - 30));
     });
 
-    // Shooting
     socket.on("shoot", ({ angle }) => {
         const p = players[socket.id];
         if (!p) return;
@@ -77,7 +65,6 @@ io.on("connection", (socket) => {
         });
     });
 
-    // Open crate
     socket.on("openCrate", (type) => {
         const p = players[socket.id];
         if (!p) return;
@@ -116,28 +103,35 @@ io.on("connection", (socket) => {
         socket.emit("crateResult", p.weapon);
     });
 
-    // Disconnect
     socket.on("disconnect", () => {
         delete players[socket.id];
     });
 });
 
-// Game loop
 function gameLoop() {
-    bullets.forEach((b, index) => {
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+
         b.x += b.vx;
         b.y += b.vy;
 
         if (b.x < 0 || b.y < 0 || b.x > MAP_WIDTH || b.y > MAP_HEIGHT) {
-            bullets.splice(index, 1);
-            return;
+            bullets.splice(i, 1);
+            continue;
         }
 
         for (let id in players) {
-            const p = players[id];
             if (id === b.owner) continue;
 
-            if (b.x > p.x && b.x < p.x + 30 && b.y > p.y && b.y < p.y + 30) {
+            const p = players[id];
+
+            if (
+                b.x > p.x &&
+                b.x < p.x + 30 &&
+                b.y > p.y &&
+                b.y < p.y + 30
+            ) {
                 p.hp -= b.damage;
 
                 if (p.hp <= 0) {
@@ -145,18 +139,21 @@ function gameLoop() {
                     p.x = 1000;
                     p.y = 1000;
 
-                    if (players[b.owner]) players[b.owner].coins += 20;
+                    if (players[b.owner]) {
+                        players[b.owner].coins += 20;
+                    }
                 }
 
-                bullets.splice(index, 1);
+                bullets.splice(i, 1);
+                break;
             }
         }
-    });
+    }
 
     io.emit("state", { players, bullets });
 }
 
 setInterval(gameLoop, 1000 / 60);
 
-server.listen(3000, () => console.log("Server running"));
+server.listen(3000, () => console.log("Server running on http://localhost:3000"));
 
