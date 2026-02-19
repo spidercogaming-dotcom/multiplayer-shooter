@@ -9,7 +9,8 @@ const MAP_WIDTH = 3000;
 const MAP_HEIGHT = 3000;
 
 let players = {};
-let bullets = {};
+let bullets = [];
+let crates = [];
 let myId = null;
 let joined = false;
 let keys = {};
@@ -20,7 +21,6 @@ document.addEventListener("keyup", e => keys[e.key] = false);
 canvas.addEventListener("click", (e) => {
     if (!players[myId]) return;
 
-    const me = players[myId];
     const angle = Math.atan2(
         e.clientY - canvas.height / 2,
         e.clientX - canvas.width / 2
@@ -40,17 +40,22 @@ function startGame() {
     joined = true;
 }
 
+function changeName() {
+    const name = document.getElementById("usernameInput").value.trim();
+    if (!name) return;
+    socket.emit("joinGame", name);
+}
+
 function buyRifle() {
     socket.emit("buyWeapon", "rifle");
 }
 
-socket.on("connect", () => {
-    myId = socket.id;
-});
+socket.on("connect", () => myId = socket.id);
 
 socket.on("state", data => {
     players = data.players;
     bullets = data.bullets;
+    crates = data.crates;
 });
 
 function update() {
@@ -96,6 +101,11 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackground(camX, camY);
 
+    crates.forEach(c => {
+        ctx.fillStyle = "orange";
+        ctx.fillRect(c.x - camX - 10, c.y - camY - 10, 20, 20);
+    });
+
     for (let id in players) {
         const p = players[id];
         const x = p.x - camX;
@@ -115,6 +125,33 @@ function draw() {
         ctx.beginPath();
         ctx.arc(b.x - camX, b.y - camY, 5, 0, Math.PI * 2);
         ctx.fill();
+    });
+
+    // Minimap
+    const mapSize = 200;
+    const mapX = canvas.width - mapSize - 20;
+    const mapY = 20;
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(mapX, mapY, mapSize, mapSize);
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(mapX, mapY, mapSize, mapSize);
+
+    for (let id in players) {
+        const p = players[id];
+        const miniX = mapX + (p.x / MAP_WIDTH) * mapSize;
+        const miniY = mapY + (p.y / MAP_HEIGHT) * mapSize;
+
+        ctx.fillStyle = id === myId ? "lime" : "red";
+        ctx.fillRect(miniX - 2, miniY - 2, 4, 4);
+    }
+
+    crates.forEach(c => {
+        const miniX = mapX + (c.x / MAP_WIDTH) * mapSize;
+        const miniY = mapY + (c.y / MAP_HEIGHT) * mapSize;
+
+        ctx.fillStyle = "orange";
+        ctx.fillRect(miniX - 2, miniY - 2, 4, 4);
     });
 
     ctx.fillStyle = "white";
