@@ -13,13 +13,26 @@ const MAP_HEIGHT = 3000;
 
 let players = {};
 let bullets = [];
+let crates = [];
+
+function spawnCrate() {
+    crates.push({
+        id: Date.now() + Math.random(),
+        x: Math.random() * MAP_WIDTH,
+        y: Math.random() * MAP_HEIGHT
+    });
+}
+
+setInterval(() => {
+    if (crates.length < 15) spawnCrate();
+}, 3000);
 
 io.on("connection", (socket) => {
 
     socket.on("joinGame", (username) => {
 
         username = typeof username === "string" ? username.trim() : "Player";
-        if (username.length === 0) username = "Player";
+        if (!username) username = "Player";
         username = username.substring(0, 16);
         username = username.replace(/[^a-zA-Z0-9_ ]/g, "");
 
@@ -51,7 +64,6 @@ io.on("connection", (socket) => {
         if (!p) return;
 
         const now = Date.now();
-
         const fireRate = p.weapon === "rifle" ? 150 : 400;
         if (now - p.lastShot < fireRate) return;
 
@@ -110,13 +122,27 @@ function updateGame() {
                     p.x = 1500;
                     p.y = 1500;
                 }
-
                 break;
             }
         }
     });
 
-    io.volatile.emit("state", { players, bullets });
+    // Crate pickup
+    for (let id in players) {
+        const p = players[id];
+
+        crates.forEach((c, index) => {
+            const dx = p.x - c.x;
+            const dy = p.y - c.y;
+
+            if (Math.sqrt(dx * dx + dy * dy) < 25) {
+                p.coins += 25;
+                crates.splice(index, 1);
+            }
+        });
+    }
+
+    io.volatile.emit("state", { players, bullets, crates });
 }
 
 setInterval(updateGame, 1000 / 30);
