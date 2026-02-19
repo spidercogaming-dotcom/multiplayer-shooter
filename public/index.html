@@ -7,15 +7,12 @@
         body {
             margin: 0;
             overflow: hidden;
-            background: #000;
-            font-family: Arial, sans-serif;
+            background: black;
+            font-family: Arial;
         }
 
-        canvas {
-            display: none;
-        }
+        canvas { display: none; }
 
-        /* MAIN MENU */
         #menu {
             position: absolute;
             top: 50%;
@@ -25,26 +22,17 @@
             color: white;
         }
 
-        #menu h1 {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-
         #menu input {
             padding: 10px;
             width: 220px;
             margin-bottom: 10px;
-            font-size: 16px;
-            text-align: center;
         }
 
         #menu button {
             padding: 10px 25px;
-            font-size: 16px;
             cursor: pointer;
         }
 
-        /* SIDE PANEL */
         #sidePanel {
             position: fixed;
             top: 20px;
@@ -57,60 +45,33 @@
             display: none;
         }
 
-        #sidePanel h3 {
-            margin-top: 0;
-        }
-
+        #sidePanel button,
         #sidePanel input {
             width: 100%;
+            margin-bottom: 8px;
             padding: 6px;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        #sidePanel button {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        #sidePanel hr {
-            border: 0;
-            border-top: 1px solid #444;
-            margin: 10px 0;
         }
     </style>
 </head>
 <body>
 
-    <!-- MENU -->
-    <div id="menu">
-        <h1>Rise of Ikon</h1>
-        <input id="startName" maxlength="16" placeholder="Enter Username">
-        <br>
-        <button onclick="startGame()">PLAY</button>
-    </div>
+<div id="menu">
+    <h1>Rise of Ikon</h1>
+    <input id="startName" maxlength="16" placeholder="Enter Username">
+    <br>
+    <button onclick="startGame()">PLAY</button>
+</div>
 
-    <!-- SIDE PANEL (SHOP + USER SETTINGS) -->
-    <div id="sidePanel">
-        <h3>Player Menu</h3>
+<div id="sidePanel">
+    <input id="usernameInput" maxlength="16" placeholder="New Username">
+    <button onclick="changeName()">Change Name</button>
+    <button onclick="buyRifle()">Buy Rifle (100 Coins)</button>
+</div>
 
-        <input id="usernameInput" maxlength="16" placeholder="New Username">
-        <button onclick="changeName()">Change Name</button>
+<canvas id="game"></canvas>
 
-        <hr>
-
-        <button onclick="buyRifle()">Buy Rifle (100 Coins)</button>
-    </div>
-
-    <!-- GAME CANVAS -->
-    <canvas id="game"></canvas>
-
-    <!-- SOCKET.IO -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="game.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
 
 </body>
 </html>
