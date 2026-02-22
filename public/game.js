@@ -1,97 +1,95 @@
+const socket = io();
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const MAP_WIDTH = 2000;
-const MAP_HEIGHT = 2000;
+const MAP_WIDTH = 3000;
+const MAP_HEIGHT = 3000;
 
-let username = "";
-let coins = 0;
-
-let player = {
-    x: MAP_WIDTH / 2,
-    y: MAP_HEIGHT / 2,
-    size: 30,
-    speed: 5
-};
-
+let playerId = null;
+let players = {};
+let bullets = {};
 let keys = {};
-let bullets = [];
+let mouse = { x: 0, y: 0 };
 
-let fireRate = 400;
-let lastShot = 0;
-
-const weapons = {
-    common: { name: "Common Blaster", fireRate: 400, color: "white" },
-    rare: { name: "Rare Striker", fireRate: 250, color: "blue" },
-    epic: { name: "Epic Destroyer", fireRate: 150, color: "purple" },
-    legendary: { name: "Legendary Ikon", fireRate: 80, color: "gold" }
-};
-
-let crateAnimation = null;
-let crateTimer = 0;
+let shopOpen = false;
 
 function startGame() {
-    username = document.getElementById("usernameInput").value || "Ikon";
+    const username = document.getElementById("usernameInput").value || "Ikon";
     document.getElementById("menu").style.display = "none";
-    document.getElementById("crateBtn").style.display = "block";
     document.getElementById("coinsDisplay").style.display = "block";
+    document.getElementById("shopBtn").style.display = "block";
+    document.getElementById("shopPanel").style.display = "none";
     canvas.style.display = "block";
+
+    socket.emit("joinGame", username);
     gameLoop();
 }
 
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
+socket.on("connect", () => {
+    playerId = socket.id;
+});
 
-canvas.addEventListener("click", shootBullet);
+socket.on("state", (data) => {
+    players = data.players;
+    bullets = data.bullets;
+});
 
-function shootBullet() {
-    const now = Date.now();
-    if (now - lastShot < fireRate) return;
-    lastShot = now;
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-    bullets.push({
-        x: player.x,
-        y: player.y,
-        dx: 10,
-        dy: 0
-    });
-}
+canvas.addEventListener("mousemove", e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+});
 
-function update() {
+canvas.addEventListener("click", () => {
+    const me = players[playerId];
+    if (!me) return;
 
-    if (keys["w"]) player.y -= player.speed;
-    if (keys["s"]) player.y += player.speed;
-    if (keys["a"]) player.x -= player.speed;
-    if (keys["d"]) player.x += player.speed;
-
-    bullets.forEach(b => {
-        b.x += b.dx;
-        b.y += b.dy;
-    });
-
-    bullets = bullets.filter(b => 
-        b.x < MAP_WIDTH && b.y < MAP_HEIGHT && b.x > 0 && b.y > 0
+    const angle = Math.atan2(
+        mouse.y - canvas.height / 2,
+        mouse.x - canvas.width / 2
     );
+
+    socket.emit("shoot", angle);
+});
+
+function updateMovement() {
+    let dx = 0;
+    let dy = 0;
+
+    if (keys["w"]) dy -= 1;
+    if (keys["s"]) dy += 1;
+    if (keys["a"]) dx -= 1;
+    if (keys["d"]) dx += 1;
+
+    if (dx !== 0 || dy !== 0) {
+        socket.emit("move", { dx, dy });
+    }
 }
 
-function drawBackground() {
+function drawBackground(me) {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    const grid = 100;
     ctx.strokeStyle = "rgba(255,255,255,0.05)";
-    const gridSize = 100;
 
-    for (let x = 0; x < canvas.width; x += gridSize) {
+    const offsetX = me.x - canvas.width / 2;
+    const offsetY = me.y - canvas.height / 2;
+
+    for (let x = -offsetX % grid; x < canvas.width; x += grid) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, canvas.height);
         ctx.stroke();
     }
 
-    for (let y = 0; y < canvas.height; y += gridSize) {
+    for (let y = -offsetY % grid; y < canvas.height; y += grid) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
@@ -99,98 +97,61 @@ function drawBackground() {
     }
 }
 
-function drawPlayer() {
-    ctx.fillStyle = "red";
-    ctx.fillRect(
-        canvas.width/2 - player.size/2,
-        canvas.height/2 - player.size/2,
-        player.size,
-        player.size
-    );
+function drawPlayers(me) {
+    for (let id in players) {
+        const p = players[id];
 
-    ctx.fillStyle = "white";
-    ctx.font = "14px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(username, canvas.width/2, canvas.height/2 - 20);
+        const screenX = canvas.width / 2 + (p.x - me.x);
+        const screenY = canvas.height / 2 + (p.y - me.y);
+
+        ctx.fillStyle = id === playerId ? "red" : "white";
+        ctx.fillRect(screenX - 15, screenY - 15, 30, 30);
+
+        ctx.fillStyle = "yellow";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(p.name, screenX, screenY - 25);
+    }
 }
 
-function drawBullets() {
-    ctx.fillStyle = "yellow";
+function drawBullets(me) {
+    ctx.fillStyle = "orange";
+
     bullets.forEach(b => {
-        ctx.fillRect(
-            canvas.width/2 + (b.x - player.x),
-            canvas.height/2 + (b.y - player.y),
-            5, 5
-        );
+        const screenX = canvas.width / 2 + (b.x - me.x);
+        const screenY = canvas.height / 2 + (b.y - me.y);
+
+        ctx.fillRect(screenX, screenY, 5, 5);
     });
 }
 
-function drawMiniMap() {
-    const size = 150;
-    const x = canvas.width - size - 20;
-    const y = 20;
-
-    ctx.fillStyle = "#222";
-    ctx.fillRect(x, y, size, size);
-
-    ctx.fillStyle = "red";
-    ctx.fillRect(
-        x + (player.x / MAP_WIDTH) * size,
-        y + (player.y / MAP_HEIGHT) * size,
-        5, 5
-    );
+function drawUI(me) {
+    document.getElementById("coinsDisplay").innerText =
+        "Coins: " + me.coins + " | Weapon: " + me.weapon;
 }
 
-function openCrate() {
-    if (coins < 50) {
-        alert("Not enough coins!");
-        return;
-    }
-
-    coins -= 50;
-
-    let rand = Math.random();
-    let reward;
-
-    if (rand < 0.6) reward = weapons.common;
-    else if (rand < 0.85) reward = weapons.rare;
-    else if (rand < 0.95) reward = weapons.epic;
-    else reward = weapons.legendary;
-
-    fireRate = reward.fireRate;
-
-    crateAnimation = reward;
-    crateTimer = 120;
+function toggleShop() {
+    shopOpen = !shopOpen;
+    document.getElementById("shopPanel").style.display =
+        shopOpen ? "block" : "none";
 }
 
-function drawCrateAnimation() {
-    if (crateTimer > 0) {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-
-        ctx.fillStyle = crateAnimation.color;
-        ctx.font = "40px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(
-            crateAnimation.name,
-            canvas.width/2,
-            canvas.height/2
-        );
-
-        crateTimer--;
-    }
+function openCrate(type) {
+    socket.emit("openCrate", type);
 }
 
 function gameLoop() {
-    update();
-    drawBackground();
-    drawBullets();
-    drawPlayer();
-    drawMiniMap();
-    drawCrateAnimation();
+    const me = players[playerId];
+    if (!me) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
 
-    document.getElementById("coinsDisplay").innerText = "Coins: " + coins;
+    updateMovement();
+    drawBackground(me);
+    drawPlayers(me);
+    drawBullets(me);
+    drawUI(me);
 
     requestAnimationFrame(gameLoop);
 }
-
