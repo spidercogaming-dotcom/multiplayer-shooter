@@ -15,10 +15,7 @@ let keys = {};
 
 document.addEventListener("keydown", (e)=> keys[e.key]=true);
 document.addEventListener("keyup", (e)=> keys[e.key]=false);
-
-document.addEventListener("mousedown", ()=> {
-    socket.emit("shoot");
-});
+document.addEventListener("mousedown", ()=> socket.emit("shoot"));
 
 socket.on("updatePlayers", (serverPlayers)=>{
     players = serverPlayers;
@@ -58,7 +55,7 @@ function draw(){
     }
 
     document.getElementById("weaponText").innerText =
-        "Weapon: " + player.weapon;
+        "Weapon: " + player.weapon.toUpperCase();
 
     drawMinimap();
 }
@@ -69,11 +66,7 @@ function drawMinimap(){
     for(let id in players){
         let p = players[id];
         miniCtx.fillStyle = id===socket.id?"#00ff00":"#ff0000";
-        miniCtx.fillRect(
-            (p.x/3000)*150,
-            (p.y/3000)*150,
-            5,5
-        );
+        miniCtx.fillRect((p.x/3000)*150,(p.y/3000)*150,5,5);
     }
 }
 
@@ -84,6 +77,42 @@ function toggleShop(){
 
 function buy(weapon){
     socket.emit("buyWeapon",weapon);
+}
+
+const crateWeapons = [
+    "pistol","pistol","pistol","pistol",
+    "rifle","rifle",
+    "ak47",
+    "k24",
+    "minigun",
+    "sniper",
+    "testy",
+    "laser"
+];
+
+function openCrate(){
+    document.getElementById("crateUI").style.display="block";
+    let spin = document.getElementById("crateSpin");
+
+    let spins = 0;
+    let interval = setInterval(()=>{
+        let randomWeapon = crateWeapons[Math.floor(Math.random()*crateWeapons.length)];
+        spin.innerText = randomWeapon.toUpperCase();
+        spins++;
+
+        if(spins > 25){
+            clearInterval(interval);
+
+            let finalWeapon = crateWeapons[Math.floor(Math.random()*crateWeapons.length)];
+            spin.innerText = "YOU GOT: " + finalWeapon.toUpperCase();
+
+            socket.emit("buyWeapon", finalWeapon);
+        }
+    },100);
+}
+
+function closeCrate(){
+    document.getElementById("crateUI").style.display="none";
 }
 
 function gameLoop(){
