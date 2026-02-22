@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rise of Ikons</title>
-    <style>
-        body { margin:0; overflow:hidden; background:#111; color:white; font-family:sans-serif;}
-        #shop {
-            position:absolute;
-            top:50%;
-            left:50%;
-            transform:translate(-50%,-50%);
-            background:#222;
-            padding:20px;
-            display:none;
-        }
-        button { margin:5px; }
-        #weaponText {
-            position:absolute;
-            bottom:10px;
-            left:10px;
-        }
-        #minimap {
-            position:absolute;
-            top:10px;
-            left:10px;
-            width:150px;
-            height:150px;
-            background:#000;
-            border:2px solid white;
-        }
-    </style>
+<title>Rise of Ikons</title>
+<style>
+body { margin:0; overflow:hidden; background:#111; color:white; font-family:sans-serif;}
+#shop, #crateUI {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#222;
+    padding:20px;
+    display:none;
+    text-align:center;
+}
+button { margin:5px; }
+#weaponText {
+    position:absolute;
+    bottom:10px;
+    left:10px;
+}
+#minimap {
+    position:absolute;
+    top:10px;
+    left:10px;
+    width:150px;
+    height:150px;
+    background:#000;
+    border:2px solid white;
+}
+</style>
 </head>
 <body>
 
@@ -37,18 +38,25 @@
 
 <div id="weaponText"></div>
 
+<button style="position:absolute;top:10px;right:10px;" onclick="toggleShop()">Shop</button>
+<button style="position:absolute;top:50px;right:10px;" onclick="openCrate()">Open Crate</button>
+
 <div id="shop">
-    <h3>Weapon Shop</h3>
-    <button onclick="buy('rifle')">Rifle</button>
-    <button onclick="buy('ak47')">AK47</button>
-    <button onclick="buy('k24')">K24</button>
-    <button onclick="buy('minigun')">Minigun</button>
-    <button onclick="buy('laser')">Laser</button>
-    <br>
-    <button onclick="toggleShop()">Close</button>
+<h3>Weapon Shop</h3>
+<button onclick="buy('rifle')">Rifle</button>
+<button onclick="buy('ak47')">AK47</button>
+<button onclick="buy('k24')">K24</button>
+<button onclick="buy('minigun')">Minigun</button>
+<button onclick="buy('laser')">Laser</button>
+<br>
+<button onclick="toggleShop()">Close</button>
 </div>
 
-<button style="position:absolute;top:10px;right:10px;" onclick="toggleShop()">Shop</button>
+<div id="crateUI">
+<h2>Opening Crate...</h2>
+<div id="crateSpin" style="font-size:22px;margin:20px;"></div>
+<button onclick="closeCrate()">Close</button>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
