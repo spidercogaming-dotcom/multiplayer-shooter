@@ -10,26 +10,20 @@ app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
 
-const MAP_WIDTH = 3000;
-const MAP_HEIGHT = 3000;
-
 let players = {};
 let bullets = [];
 
+const MAP_WIDTH = 2000;
+const MAP_HEIGHT = 2000;
+
 /* ============================= */
-/* 🔫 WEAPON SYSTEM */
+/* WEAPONS */
 /* ============================= */
 
 const weapons = {
     pistol: { fireRate: 400, damage: 20 },
-    rpg: { fireRate: 1200, damage: 60 },
     rifle: { fireRate: 200, damage: 15 },
-    ak47: { fireRate: 150, damage: 18 },
-    sniper: { fireRate: 1000, damage: 80 },
-    minigun: { fireRate: 80, damage: 10 },
-    k24: { fireRate: 250, damage: 22 },
-    testy: { fireRate: 60, damage: 25 },
-    laser: { fireRate: 40, damage: 30 }
+    sniper: { fireRate: 1000, damage: 80 }
 };
 
 function randomSpawn() {
@@ -38,8 +32,6 @@ function randomSpawn() {
         y: Math.random() * MAP_HEIGHT
     };
 }
-
-/* ============================= */
 
 io.on("connection", socket => {
 
@@ -60,33 +52,29 @@ io.on("connection", socket => {
     });
 
     socket.on("move", data => {
-        const player = players[socket.id];
-        if (!player) return;
+        const p = players[socket.id];
+        if (!p) return;
 
-        player.x += data.dx;
-        player.y += data.dy;
-
-        player.x = Math.max(0, Math.min(MAP_WIDTH, player.x));
-        player.y = Math.max(0, Math.min(MAP_HEIGHT, player.y));
+        p.x += data.dx;
+        p.y += data.dy;
     });
 
     socket.on("shoot", angle => {
 
-        const player = players[socket.id];
-        if (!player) return;
+        const p = players[socket.id];
+        if (!p) return;
 
-        const weapon = weapons[player.weapon];
+        const weapon = weapons[p.weapon];
         const now = Date.now();
 
-        if (now - player.lastShot < weapon.fireRate) return;
-
-        player.lastShot = now;
+        if (now - p.lastShot < weapon.fireRate) return;
+        p.lastShot = now;
 
         bullets.push({
-            x: player.x,
-            y: player.y,
+            x: p.x,
+            y: p.y,
             angle,
-            speed: 15,
+            speed: 12,
             damage: weapon.damage,
             owner: socket.id
         });
@@ -94,31 +82,31 @@ io.on("connection", socket => {
 
     socket.on("openCrate", type => {
 
-        const player = players[socket.id];
-        if (!player) return;
+        const p = players[socket.id];
+        if (!p) return;
 
         let cost = 0;
-        let pool = [];
+        let reward = "pistol";
 
         if (type === "epic") {
             cost = 10;
-            pool = ["pistol","rpg"];
+            reward = "pistol";
         }
+
         if (type === "rare") {
             cost = 50;
-            pool = ["rifle","ak47","k24"];
+            reward = "rifle";
         }
+
         if (type === "legendary") {
             cost = 100;
-            pool = ["sniper","minigun","testy","laser"];
+            reward = "sniper";
         }
 
-        if (player.coins < cost) return;
+        if (p.coins < cost) return;
 
-        player.coins -= cost;
-
-        const reward = pool[Math.floor(Math.random() * pool.length)];
-        player.weapon = reward;
+        p.coins -= cost;
+        p.weapon = reward;
 
         socket.emit("crateResult", reward);
     });
@@ -129,30 +117,32 @@ io.on("connection", socket => {
 });
 
 /* ============================= */
-/* 🎯 GAME LOOP */
+/* GAME LOOP */
 /* ============================= */
 
 setInterval(() => {
 
-    bullets.forEach((bullet, index) => {
+    bullets.forEach((b, index) => {
 
-        bullet.x += Math.cos(bullet.angle) * bullet.speed;
-        bullet.y += Math.sin(bullet.angle) * bullet.speed;
+        b.x += Math.cos(b.angle) * b.speed;
+        b.y += Math.sin(b.angle) * b.speed;
 
         for (let id in players) {
-            if (id === bullet.owner) continue;
+
+            if (id === b.owner) continue;
 
             const p = players[id];
-            const dx = p.x - bullet.x;
-            const dy = p.y - bullet.y;
+            const dx = p.x - b.x;
+            const dy = p.y - b.y;
 
             if (Math.sqrt(dx*dx + dy*dy) < 20) {
 
-                p.hp -= bullet.damage;
+                p.hp -= b.damage;
                 bullets.splice(index, 1);
 
                 if (p.hp <= 0) {
-                    const killer = players[bullet.owner];
+
+                    const killer = players[b.owner];
                     if (killer) killer.coins += 20;
 
                     const spawn = randomSpawn();
@@ -164,6 +154,7 @@ setInterval(() => {
                 break;
             }
         }
+
     });
 
     io.emit("state", { players, bullets });
