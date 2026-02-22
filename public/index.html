@@ -1,78 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rise of Ikon</title>
+    <title>Rise of Ikons</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #111;
-            color: white;
-            font-family: Arial;
+        body { margin:0; overflow:hidden; background:#111; color:white; font-family:sans-serif;}
+        #shop {
+            position:absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            background:#222;
+            padding:20px;
+            display:none;
         }
-
-        #menu {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
+        button { margin:5px; }
+        #weaponText {
+            position:absolute;
+            bottom:10px;
+            left:10px;
         }
-
-        #coinsDisplay {
-            position: absolute;
-            left: 20px;
-            top: 20px;
-            display: none;
-        }
-
-        #shopBtn {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            display: none;
-            padding: 10px;
-            background: gold;
-            border: none;
-            cursor: pointer;
-        }
-
-        #shopMenu {
-            position: absolute;
-            right: 20px;
-            top: 70px;
-            background: #222;
-            padding: 20px;
-            display: none;
-        }
-
-        canvas {
-            display: none;
+        #minimap {
+            position:absolute;
+            top:10px;
+            left:10px;
+            width:150px;
+            height:150px;
+            background:#000;
+            border:2px solid white;
         }
     </style>
 </head>
 <body>
 
-<div id="menu">
-    <h1>RISE OF IKON</h1>
-    <input id="usernameInput" placeholder="Username">
-    <br><br>
-    <button onclick="startGame()">Play</button>
-</div>
-
-<div id="coinsDisplay">Coins: 0</div>
-<button id="shopBtn" onclick="toggleShop()">Shop</button>
-
-<div id="shopMenu">
-    <button onclick="openCrate('epic')">Epic (10)</button><br><br>
-    <button onclick="openCrate('rare')">Rare (50)</button><br><br>
-    <button onclick="openCrate('legendary')">Legendary (100)</button>
-</div>
-
 <canvas id="gameCanvas"></canvas>
+<canvas id="minimap"></canvas>
+
+<div id="weaponText"></div>
+
+<div id="shop">
+    <h3>Weapon Shop</h3>
+    <button onclick="buy('rifle')">Rifle</button>
+    <button onclick="buy('ak47')">AK47</button>
+    <button onclick="buy('k24')">K24</button>
+    <button onclick="buy('minigun')">Minigun</button>
+    <button onclick="buy('laser')">Laser</button>
+    <br>
+    <button onclick="toggleShop()">Close</button>
+</div>
+
+<button style="position:absolute;top:10px;right:10px;" onclick="toggleShop()">Shop</button>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
-
 </body>
 </html>
