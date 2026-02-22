@@ -2,31 +2,29 @@
 <html>
 <head>
     <title>Rise of Ikon</title>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background: #111;
             font-family: Arial, sans-serif;
-            color: white;
         }
 
-        /* ===== MENU ===== */
         #menu {
             position: absolute;
             top: 40%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
+            color: white;
         }
 
         #menu input {
             padding: 10px;
             font-size: 16px;
-            width: 200px;
+            border: none;
+            border-radius: 5px;
         }
 
         #menu button {
@@ -34,58 +32,63 @@
             font-size: 16px;
             margin-top: 10px;
             cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: gold;
+            font-weight: bold;
         }
 
-        /* ===== COINS ===== */
         #coinsDisplay {
             position: absolute;
             left: 20px;
             top: 20px;
+            color: white;
             font-size: 18px;
             display: none;
         }
 
-        /* ===== SHOP BUTTON ===== */
         #shopBtn {
             position: absolute;
             right: 20px;
             top: 20px;
-            padding: 10px 20px;
+            padding: 10px 15px;
             background: gold;
             border: none;
             font-weight: bold;
             cursor: pointer;
             display: none;
+            border-radius: 5px;
         }
 
-        /* ===== SHOP MENU ===== */
-        #shopMenu {
+        #shopPanel {
             position: absolute;
             right: 20px;
-            top: 70px;
+            top: 60px;
             background: #222;
-            padding: 20px;
-            border-radius: 8px;
+            padding: 15px;
             display: none;
-            width: 220px;
+            color: white;
+            border-radius: 8px;
+            width: 200px;
         }
 
-        #shopMenu h3 {
+        #shopPanel h3 {
             margin-top: 0;
         }
 
-        #shopMenu button {
+        #shopPanel button {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
-            cursor: pointer;
             border: none;
+            cursor: pointer;
+            border-radius: 5px;
             font-weight: bold;
         }
 
         .epic { background: purple; color: white; }
         .rare { background: blue; color: white; }
-        .legendary { background: orange; color: black; }
+        .legendary { background: gold; color: black; }
 
         canvas {
             display: none;
@@ -94,7 +97,7 @@
 </head>
 <body>
 
-<!-- ===== MAIN MENU ===== -->
+<!-- MENU -->
 <div id="menu">
     <h1>RISE OF IKON</h1>
     <input id="usernameInput" placeholder="Enter Username">
@@ -102,13 +105,12 @@
     <button onclick="startGame()">Play</button>
 </div>
 
-<!-- ===== HUD ===== -->
+<!-- UI -->
 <div id="coinsDisplay">Coins: 0</div>
-
 <button id="shopBtn" onclick="toggleShop()">Shop</button>
 
-<!-- ===== SHOP MENU ===== -->
-<div id="shopMenu">
+<!-- SHOP PANEL -->
+<div id="shopPanel">
     <h3>Weapon Crates</h3>
 
     <button class="epic" onclick="openCrate('epic')">
@@ -124,13 +126,13 @@
     </button>
 </div>
 
-<!-- ===== GAME CANVAS ===== -->
+<!-- GAME CANVAS -->
 <canvas id="gameCanvas"></canvas>
 
-<!-- ===== SOCKET.IO ===== -->
+<!-- SOCKET.IO (IMPORTANT FOR RENDER) -->
 <script src="/socket.io/socket.io.js"></script>
 
-<!-- ===== GAME SCRIPT ===== -->
+<!-- GAME LOGIC -->
 <script src="game.js"></script>
 
 </body>
