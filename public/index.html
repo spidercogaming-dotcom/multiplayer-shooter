@@ -2,13 +2,13 @@
 <html>
 <head>
     <title>Rise of Ikon</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background: #111;
-            font-family: Arial, sans-serif;
+            color: white;
+            font-family: Arial;
         }
 
         #menu {
@@ -17,33 +17,12 @@
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            color: white;
-        }
-
-        #menu input {
-            padding: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-        }
-
-        #menu button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background: gold;
-            font-weight: bold;
         }
 
         #coinsDisplay {
             position: absolute;
             left: 20px;
             top: 20px;
-            color: white;
-            font-size: 18px;
             display: none;
         }
 
@@ -51,44 +30,21 @@
             position: absolute;
             right: 20px;
             top: 20px;
-            padding: 10px 15px;
+            display: none;
+            padding: 10px;
             background: gold;
             border: none;
-            font-weight: bold;
             cursor: pointer;
-            display: none;
-            border-radius: 5px;
         }
 
-        #shopPanel {
+        #shopMenu {
             position: absolute;
             right: 20px;
-            top: 60px;
+            top: 70px;
             background: #222;
-            padding: 15px;
+            padding: 20px;
             display: none;
-            color: white;
-            border-radius: 8px;
-            width: 200px;
         }
-
-        #shopPanel h3 {
-            margin-top: 0;
-        }
-
-        #shopPanel button {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        .epic { background: purple; color: white; }
-        .rare { background: blue; color: white; }
-        .legendary { background: gold; color: black; }
 
         canvas {
             display: none;
@@ -97,42 +53,25 @@
 </head>
 <body>
 
-<!-- MENU -->
 <div id="menu">
     <h1>RISE OF IKON</h1>
-    <input id="usernameInput" placeholder="Enter Username">
-    <br>
+    <input id="usernameInput" placeholder="Username">
+    <br><br>
     <button onclick="startGame()">Play</button>
 </div>
 
-<!-- UI -->
 <div id="coinsDisplay">Coins: 0</div>
 <button id="shopBtn" onclick="toggleShop()">Shop</button>
 
-<!-- SHOP PANEL -->
-<div id="shopPanel">
-    <h3>Weapon Crates</h3>
-
-    <button class="epic" onclick="openCrate('epic')">
-        Epic Crate (10 Coins)
-    </button>
-
-    <button class="rare" onclick="openCrate('rare')">
-        Rare Crate (50 Coins)
-    </button>
-
-    <button class="legendary" onclick="openCrate('legendary')">
-        Legendary Crate (100 Coins)
-    </button>
+<div id="shopMenu">
+    <button onclick="openCrate('epic')">Epic (10)</button><br><br>
+    <button onclick="openCrate('rare')">Rare (50)</button><br><br>
+    <button onclick="openCrate('legendary')">Legendary (100)</button>
 </div>
 
-<!-- GAME CANVAS -->
 <canvas id="gameCanvas"></canvas>
 
-<!-- SOCKET.IO (IMPORTANT FOR RENDER) -->
 <script src="/socket.io/socket.io.js"></script>
-
-<!-- GAME LOGIC -->
 <script src="game.js"></script>
 
 </body>
