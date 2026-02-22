@@ -17,7 +17,6 @@ const weapons = {
     rifle:    { fireRate: 220, damage: 20 },
     ak47:     { fireRate: 160, damage: 24 },
     k24:      { fireRate: 130, damage: 28 },
-    rpg:      { fireRate: 500, damage: 65 },
     sniper:   { fireRate: 350, damage: 80 },
     minigun:  { fireRate: 60,  damage: 15 },
     testy:    { fireRate: 45,  damage: 30 },
@@ -35,22 +34,21 @@ io.on("connection", (socket) => {
     };
 
     socket.on("move", (data) => {
-        const player = players[socket.id];
-        if (!player) return;
-
-        player.x += data.x;
-        player.y += data.y;
+        const p = players[socket.id];
+        if (!p) return;
+        p.x += data.x;
+        p.y += data.y;
     });
 
     socket.on("shoot", () => {
-        const player = players[socket.id];
-        if (!player) return;
+        const p = players[socket.id];
+        if (!p) return;
 
-        const weapon = weapons[player.weapon];
+        const weapon = weapons[p.weapon];
         const now = Date.now();
 
-        if (now - player.lastShot >= weapon.fireRate) {
-            player.lastShot = now;
+        if (now - p.lastShot >= weapon.fireRate) {
+            p.lastShot = now;
         }
     });
 
