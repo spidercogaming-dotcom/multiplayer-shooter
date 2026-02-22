@@ -16,11 +16,17 @@ let keys = {};
 let mouse = { x: 0, y: 0 };
 
 let shopOpen = false;
-let crateAnimation = null;
-let crateTimer = 0;
+
+/* 🎰 CRATE SPIN */
+let crateSpin = false;
+let spinItems = [];
+let spinIndex = 0;
+let spinSpeed = 40;
+let spinSlowdown = 0.5;
 
 function startGame() {
     const username = document.getElementById("usernameInput").value || "Ikon";
+
     document.getElementById("menu").style.display = "none";
     document.getElementById("coinsDisplay").style.display = "block";
     document.getElementById("shopBtn").style.display = "block";
@@ -30,14 +36,39 @@ function startGame() {
     gameLoop();
 }
 
-socket.on("connect", () => {
-    playerId = socket.id;
-});
+socket.on("connect", () => playerId = socket.id);
 
-socket.on("state", (data) => {
+socket.on("state", data => {
     players = data.players;
     bullets = data.bullets;
+
+    if (players[playerId]) {
+        document.getElementById("coinsDisplay").innerText =
+            "Coins: " + players[playerId].coins;
+    }
 });
+
+socket.on("crateResult", weapon => {
+
+    const pool = [
+        "pistol","rpg","rifle","ak47",
+        "sniper","minigun","k24","testy","laser"
+    ];
+
+    spinItems = [];
+
+    for (let i = 0; i < 30; i++) {
+        spinItems.push(pool[Math.floor(Math.random()*pool.length)]);
+    }
+
+    spinItems.push(weapon);
+
+    spinIndex = 0;
+    spinSpeed = 40;
+    crateSpin = true;
+});
+
+/* ============================= */
 
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
@@ -52,148 +83,99 @@ canvas.addEventListener("click", () => {
     if (!me) return;
 
     const angle = Math.atan2(
-        mouse.y - canvas.height / 2,
-        mouse.x - canvas.width / 2
+        mouse.y - canvas.height/2,
+        mouse.x - canvas.width/2
     );
 
     socket.emit("shoot", angle);
 });
 
-function updateMovement() {
-    let dx = 0;
-    let dy = 0;
+/* ============================= */
 
-    if (keys["w"]) dy -= 1;
-    if (keys["s"]) dy += 1;
-    if (keys["a"]) dx -= 1;
-    if (keys["d"]) dx += 1;
+function gameLoop() {
+    requestAnimationFrame(gameLoop);
 
-    if (dx !== 0 || dy !== 0) {
-        socket.emit("move", { dx, dy });
-    }
-}
-
-function drawBackground(me) {
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const grid = 100;
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
-
-    const offsetX = me.x - canvas.width / 2;
-    const offsetY = me.y - canvas.height / 2;
-
-    for (let x = -offsetX % grid; x < canvas.width; x += grid) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-    }
-
-    for (let y = -offsetY % grid; y < canvas.height; y += grid) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-}
-
-function drawPlayers(me) {
-    for (let id in players) {
-        const p = players[id];
-
-        const screenX = canvas.width / 2 + (p.x - me.x);
-        const screenY = canvas.height / 2 + (p.y - me.y);
-
-        ctx.fillStyle = id === playerId ? "red" : "white";
-        ctx.fillRect(screenX - 15, screenY - 15, 30, 30);
-
-        ctx.fillStyle = "yellow";
-        ctx.font = "14px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(p.name, screenX, screenY - 25);
-    }
-}
-
-function drawBullets(me) {
-    ctx.fillStyle = "orange";
-
-    bullets.forEach(b => {
-        const screenX = canvas.width / 2 + (b.x - me.x);
-        const screenY = canvas.height / 2 + (b.y - me.y);
-        ctx.fillRect(screenX, screenY, 5, 5);
-    });
-}
-
-function drawMiniMap(me) {
-    const size = 180;
-    const x = 20;
-    const y = 20;
-
-    ctx.fillStyle = "#222";
-    ctx.fillRect(x, y, size, size);
-
-    for (let id in players) {
-        const p = players[id];
-
-        const dotX = x + (p.x / MAP_WIDTH) * size;
-        const dotY = y + (p.y / MAP_HEIGHT) * size;
-
-        ctx.fillStyle = id === playerId ? "red" : "white";
-        ctx.fillRect(dotX, dotY, 4, 4);
-    }
-}
-
-function drawUI(me) {
-    document.getElementById("coinsDisplay").innerText =
-        "Coins: " + me.coins + " | Weapon: " + me.weapon;
-}
-
-function toggleShop() {
-    shopOpen = !shopOpen;
-    document.getElementById("shopPanel").style.display =
-        shopOpen ? "block" : "none";
-}
-
-function openCrate(type) {
-    socket.emit("openCrate", type);
-
-    // Start animation
     const me = players[playerId];
     if (!me) return;
 
-    crateAnimation = "Opening " + type.toUpperCase() + " Crate...";
-    crateTimer = 120;
+    if (keys["w"]) socket.emit("move", { dx: 0, dy: -5 });
+    if (keys["s"]) socket.emit("move", { dx: 0, dy: 5 });
+    if (keys["a"]) socket.emit("move", { dx: -5, dy: 0 });
+    if (keys["d"]) socket.emit("move", { dx: 5, dy: 0 });
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const camX = me.x - canvas.width/2;
+    const camY = me.y - canvas.height/2;
+
+    ctx.save();
+    ctx.translate(-camX, -camY);
+
+    for (let id in players) {
+        const p = players[id];
+
+        ctx.fillStyle = id === playerId ? "cyan" : "red";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 20, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.fillStyle = "white";
+        ctx.fillText(p.username, p.x-20, p.y-30);
+    }
+
+    ctx.fillStyle = "yellow";
+    bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 5, 0, Math.PI*2);
+        ctx.fill();
+    });
+
+    ctx.restore();
+
+    drawMinimap();
+
+    if (crateSpin) drawCrateSpin();
 }
 
-function drawCrateAnimation() {
-    if (crateTimer > 0) {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+/* ============================= */
+/* 🗺 MINIMAP */
+/* ============================= */
 
-        ctx.fillStyle = "gold";
-        ctx.font = "40px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(crateAnimation, canvas.width/2, canvas.height/2);
+function drawMinimap() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(10, 10, 200, 200);
 
-        crateTimer--;
+    for (let id in players) {
+        const p = players[id];
+        const miniX = 10 + (p.x / MAP_WIDTH) * 200;
+        const miniY = 10 + (p.y / MAP_HEIGHT) * 200;
+
+        ctx.fillStyle = id === playerId ? "cyan" : "red";
+        ctx.fillRect(miniX, miniY, 4, 4);
     }
 }
 
-function gameLoop() {
-    const me = players[playerId];
-    if (!me) {
-        requestAnimationFrame(gameLoop);
-        return;
+/* ============================= */
+/* 🎰 SPIN ANIMATION */
+/* ============================= */
+
+function drawCrateSpin() {
+
+    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const centerY = canvas.height/2;
+
+    for (let i = 0; i < spinItems.length; i++) {
+        const y = centerY + (i - spinIndex) * 60;
+        ctx.fillStyle = "white";
+        ctx.fillText(spinItems[i], canvas.width/2 - 50, y);
     }
 
-    updateMovement();
-    drawBackground(me);
-    drawPlayers(me);
-    drawBullets(me);
-    drawMiniMap(me);
-    drawUI(me);
-    drawCrateAnimation();
+    spinIndex += spinSpeed/100;
+    spinSpeed -= spinSlowdown;
 
-    requestAnimationFrame(gameLoop);
+    if (spinSpeed <= 0) {
+        crateSpin = false;
+    }
 }
