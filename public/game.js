@@ -57,6 +57,9 @@ function draw(){
     document.getElementById("weaponText").innerText =
         "Weapon: " + player.weapon.toUpperCase();
 
+    document.getElementById("coinsText").innerText =
+        "Coins: " + player.coins;
+
     drawMinimap();
 }
 
@@ -91,6 +94,13 @@ const crateWeapons = [
 ];
 
 function openCrate(){
+    if(player.coins < 100){
+        alert("Not enough coins!");
+        return;
+    }
+
+    socket.emit("addCoins",-100);
+
     document.getElementById("crateUI").style.display="block";
     let spin = document.getElementById("crateSpin");
 
