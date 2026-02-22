@@ -13,14 +13,14 @@ const PORT = process.env.PORT || 3000;
 let players = {};
 
 const weapons = {
-    pistol:   { fireRate: 400, damage: 18 },
-    rifle:    { fireRate: 220, damage: 20 },
-    ak47:     { fireRate: 160, damage: 24 },
-    k24:      { fireRate: 130, damage: 28 },
-    sniper:   { fireRate: 350, damage: 80 },
-    minigun:  { fireRate: 60,  damage: 15 },
-    testy:    { fireRate: 45,  damage: 30 },
-    laser:    { fireRate: 30,  damage: 35 }
+    pistol:   { fireRate: 400, damage: 18, price: 0 },
+    rifle:    { fireRate: 220, damage: 20, price: 50 },
+    ak47:     { fireRate: 160, damage: 24, price: 100 },
+    k24:      { fireRate: 130, damage: 28, price: 150 },
+    sniper:   { fireRate: 350, damage: 80, price: 200 },
+    minigun:  { fireRate: 60,  damage: 15, price: 300 },
+    testy:    { fireRate: 45,  damage: 30, price: 500 },
+    laser:    { fireRate: 30,  damage: 35, price: 700 }
 };
 
 io.on("connection", (socket) => {
@@ -30,6 +30,7 @@ io.on("connection", (socket) => {
         y: 1500,
         hp: 100,
         weapon: "pistol",
+        coins: 200,
         lastShot: 0
     };
 
@@ -53,8 +54,19 @@ io.on("connection", (socket) => {
     });
 
     socket.on("buyWeapon", (weaponName) => {
-        if (weapons[weaponName]) {
-            players[socket.id].weapon = weaponName;
+        const p = players[socket.id];
+        const weapon = weapons[weaponName];
+        if (!p || !weapon) return;
+
+        if (p.coins >= weapon.price) {
+            p.coins -= weapon.price;
+            p.weapon = weaponName;
+        }
+    });
+
+    socket.on("addCoins", (amount) => {
+        if (players[socket.id]) {
+            players[socket.id].coins += amount;
         }
     });
 
