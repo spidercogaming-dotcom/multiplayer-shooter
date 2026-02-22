@@ -16,6 +16,19 @@ let keys = {};
 let mouse = { x: 0, y: 0 };
 let shopOpen = false;
 
+let damageTexts = [];
+
+/* ============================= */
+/* WEAPON RARITY COLORS */
+/* ============================= */
+
+function getWeaponRarityColor(weapon) {
+    if (weapon === "pistol") return "white";
+    if (weapon === "rifle") return "lime";
+    if (weapon === "sniper") return "orange";
+    return "white";
+}
+
 /* ============================= */
 /* START GAME */
 /* ============================= */
@@ -117,10 +130,13 @@ function gameLoop() {
     }
 
     drawBullets();
+    drawDamageTexts();
 
     ctx.restore();
 
     drawMinimap();
+    drawWeaponDisplay();
+    drawLeaderboard();
 }
 
 /* ============================= */
@@ -129,17 +145,28 @@ function gameLoop() {
 
 function drawPlayer(p, isMe) {
 
-    // body
+    // Body glow by rarity
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = getWeaponRarityColor(p.weapon);
+
     ctx.fillStyle = isMe ? "cyan" : "red";
     ctx.beginPath();
     ctx.arc(p.x, p.y, 20, 0, Math.PI*2);
     ctx.fill();
 
-    // username
-    ctx.fillStyle = "white";
-    ctx.fillText(p.username, p.x - 20, p.y - 30);
+    ctx.shadowBlur = 0;
 
-    // weapon
+    // Health bar
+    ctx.fillStyle = "red";
+    ctx.fillRect(p.x - 25, p.y - 35, 50, 5);
+
+    ctx.fillStyle = "lime";
+    ctx.fillRect(p.x - 25, p.y - 35, 50 * (p.hp / 100), 5);
+
+    // Username
+    ctx.fillStyle = "white";
+    ctx.fillText(p.username, p.x - 20, p.y - 45);
+
     drawWeapon(p, isMe);
 }
 
@@ -162,23 +189,11 @@ function drawWeapon(p, isMe) {
     ctx.translate(p.x, p.y);
     ctx.rotate(angle);
 
-    let color = "gray";
-    let length = 30;
+    let length = 25;
+    let color = getWeaponRarityColor(p.weapon);
 
-    if (p.weapon === "pistol") {
-        color = "gray";
-        length = 25;
-    }
-
-    if (p.weapon === "rifle") {
-        color = "green";
-        length = 40;
-    }
-
-    if (p.weapon === "sniper") {
-        color = "blue";
-        length = 55;
-    }
+    if (p.weapon === "rifle") length = 40;
+    if (p.weapon === "sniper") length = 55;
 
     ctx.fillStyle = color;
     ctx.fillRect(0, -5, length, 10);
@@ -187,7 +202,7 @@ function drawWeapon(p, isMe) {
 }
 
 /* ============================= */
-/* DRAW BULLETS */
+/* BULLETS */
 /* ============================= */
 
 function drawBullets() {
@@ -201,7 +216,24 @@ function drawBullets() {
 }
 
 /* ============================= */
-/* 🗺 MINIMAP */
+/* DAMAGE TEXT */
+/* ============================= */
+
+function drawDamageTexts() {
+    damageTexts.forEach((d, index) => {
+        ctx.fillStyle = "white";
+        ctx.fillText(d.text, d.x, d.y);
+        d.y -= 0.5;
+        d.life--;
+
+        if (d.life <= 0) {
+            damageTexts.splice(index, 1);
+        }
+    });
+}
+
+/* ============================= */
+/* MINIMAP */
 /* ============================= */
 
 function drawMinimap() {
@@ -213,18 +245,53 @@ function drawMinimap() {
     ctx.fillRect(padding, padding, size, size);
 
     for (let id in players) {
-
         const p = players[id];
 
-        const miniX =
-            padding + (p.x / MAP_WIDTH) * size;
-
-        const miniY =
-            padding + (p.y / MAP_HEIGHT) * size;
+        const miniX = padding + (p.x / MAP_WIDTH) * size;
+        const miniY = padding + (p.y / MAP_HEIGHT) * size;
 
         ctx.fillStyle =
             id === playerId ? "cyan" : "red";
 
         ctx.fillRect(miniX, miniY, 4, 4);
     }
+}
+
+/* ============================= */
+/* WEAPON DISPLAY (BOTTOM LEFT) */
+/* ============================= */
+
+function drawWeaponDisplay() {
+
+    const me = players[playerId];
+    if (!me) return;
+
+    ctx.fillStyle = "white";
+    ctx.font = "18px Arial";
+    ctx.fillText(
+        "Weapon: " + me.weapon.toUpperCase(),
+        20,
+        canvas.height - 20
+    );
+}
+
+/* ============================= */
+/* LEADERBOARD */
+/* ============================= */
+
+function drawLeaderboard() {
+
+    let sorted = Object.values(players)
+        .sort((a, b) => b.coins - a.coins);
+
+    ctx.fillStyle = "white";
+    ctx.fillText("Leaderboard", canvas.width - 150, 30);
+
+    sorted.slice(0, 5).forEach((p, index) => {
+        ctx.fillText(
+            (index + 1) + ". " + p.username + " (" + p.coins + ")",
+            canvas.width - 150,
+            50 + index * 20
+        );
+    });
 }
