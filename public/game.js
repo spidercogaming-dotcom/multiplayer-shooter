@@ -11,18 +11,19 @@ const MAP_HEIGHT = 3000;
 
 let playerId = null;
 let players = {};
-let bullets = {};
+let bullets = [];
 let keys = {};
 let mouse = { x: 0, y: 0 };
 
 let shopOpen = false;
+let crateAnimation = null;
+let crateTimer = 0;
 
 function startGame() {
     const username = document.getElementById("usernameInput").value || "Ikon";
     document.getElementById("menu").style.display = "none";
     document.getElementById("coinsDisplay").style.display = "block";
     document.getElementById("shopBtn").style.display = "block";
-    document.getElementById("shopPanel").style.display = "none";
     canvas.style.display = "block";
 
     socket.emit("joinGame", username);
@@ -120,9 +121,27 @@ function drawBullets(me) {
     bullets.forEach(b => {
         const screenX = canvas.width / 2 + (b.x - me.x);
         const screenY = canvas.height / 2 + (b.y - me.y);
-
         ctx.fillRect(screenX, screenY, 5, 5);
     });
+}
+
+function drawMiniMap(me) {
+    const size = 180;
+    const x = 20;
+    const y = 20;
+
+    ctx.fillStyle = "#222";
+    ctx.fillRect(x, y, size, size);
+
+    for (let id in players) {
+        const p = players[id];
+
+        const dotX = x + (p.x / MAP_WIDTH) * size;
+        const dotY = y + (p.y / MAP_HEIGHT) * size;
+
+        ctx.fillStyle = id === playerId ? "red" : "white";
+        ctx.fillRect(dotX, dotY, 4, 4);
+    }
 }
 
 function drawUI(me) {
@@ -138,6 +157,27 @@ function toggleShop() {
 
 function openCrate(type) {
     socket.emit("openCrate", type);
+
+    // Start animation
+    const me = players[playerId];
+    if (!me) return;
+
+    crateAnimation = "Opening " + type.toUpperCase() + " Crate...";
+    crateTimer = 120;
+}
+
+function drawCrateAnimation() {
+    if (crateTimer > 0) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "gold";
+        ctx.font = "40px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(crateAnimation, canvas.width/2, canvas.height/2);
+
+        crateTimer--;
+    }
 }
 
 function gameLoop() {
@@ -151,7 +191,9 @@ function gameLoop() {
     drawBackground(me);
     drawPlayers(me);
     drawBullets(me);
+    drawMiniMap(me);
     drawUI(me);
+    drawCrateAnimation();
 
     requestAnimationFrame(gameLoop);
 }
