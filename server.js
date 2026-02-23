@@ -8,18 +8,19 @@ const io = socketIo(server);
 
 app.use(express.static(__dirname));
 
+const PORT = process.env.PORT || 3000;
+const MAP_SIZE = 3000;
+
 let players = {};
 let bullets = [];
-
-const MAP_SIZE = 3000;
 
 const weapons = {
     pistol: { damage: 10, fireRate: 400 },
     rifle: { damage: 15, fireRate: 250 },
-    rpg: { damage: 40, fireRate: 800 },
+    rpg: { damage: 40, fireRate: 900 },
     ak47: { damage: 20, fireRate: 180 },
     revolver: { damage: 25, fireRate: 500 },
-    sniper: { damage: 50, fireRate: 900 },
+    sniper: { damage: 50, fireRate: 1000 },
     shotgun: { damage: 35, fireRate: 600 },
     minigun: { damage: 8, fireRate: 80 },
     laser: { damage: 60, fireRate: 700 }
@@ -41,29 +42,29 @@ io.on("connection", socket => {
     });
 
     socket.on("move", data => {
-        const player = players[socket.id];
-        if (!player) return;
+        const p = players[socket.id];
+        if (!p) return;
 
-        player.x += data.dx;
-        player.y += data.dy;
+        p.x += data.dx;
+        p.y += data.dy;
 
-        player.x = Math.max(0, Math.min(MAP_SIZE, player.x));
-        player.y = Math.max(0, Math.min(MAP_SIZE, player.y));
+        p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
+        p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
     });
 
     socket.on("shoot", target => {
-        const player = players[socket.id];
-        if (!player) return;
+        const p = players[socket.id];
+        if (!p) return;
 
-        const weapon = weapons[player.weapon];
+        const weapon = weapons[p.weapon];
         const now = Date.now();
 
-        if (now - player.lastShot < weapon.fireRate) return;
-        player.lastShot = now;
+        if (now - p.lastShot < weapon.fireRate) return;
+        p.lastShot = now;
 
         bullets.push({
-            x: player.x,
-            y: player.y,
+            x: p.x,
+            y: p.y,
             targetX: target.x,
             targetY: target.y,
             owner: socket.id,
@@ -71,9 +72,9 @@ io.on("connection", socket => {
         });
     });
 
-    socket.on("setWeapon", weaponName => {
-        if (weapons[weaponName]) {
-            players[socket.id].weapon = weaponName;
+    socket.on("setWeapon", weapon => {
+        if (weapons[weapon] && players[socket.id]) {
+            players[socket.id].weapon = weapon;
         }
     });
 
@@ -83,38 +84,49 @@ io.on("connection", socket => {
 });
 
 setInterval(() => {
-    bullets.forEach((bullet, i) => {
-        const dx = bullet.targetX - bullet.x;
-        const dy = bullet.targetY - bullet.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
 
-        bullet.x += dx / dist * 20;
-        bullet.y += dy / dist * 20;
+    bullets = bullets.filter(b => {
+
+        const dx = b.targetX - b.x;
+        const dy = b.targetY - b.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist === 0) return false;
+
+        b.x += (dx / dist) * 20;
+        b.y += (dy / dist) * 20;
 
         for (let id in players) {
-            if (id === bullet.owner) continue;
+            if (id === b.owner) continue;
+
             const p = players[id];
-            const d = Math.hypot(p.x - bullet.x, p.y - bullet.y);
+            const d = Math.hypot(p.x - b.x, p.y - b.y);
+
             if (d < 20) {
-                p.hp -= bullet.damage;
+                p.hp -= b.damage;
+
                 if (p.hp <= 0) {
-                    players[bullet.owner].coins += 20;
                     p.hp = 100;
                     p.x = Math.random() * MAP_SIZE;
                     p.y = Math.random() * MAP_SIZE;
+                    if (players[b.owner]) {
+                        players[b.owner].coins += 20;
+                    }
                 }
-                bullets.splice(i, 1);
+
+                return false;
             }
         }
+
+        return true;
     });
 
     io.emit("gameState", { players, bullets });
+
 }, 1000 / 60);
 
-server.listen(3000, () => console.log("Server running"));
-
+server.listen(PORT, () => {
+    console.log("Server running on port", PORT);
+});
 
   
- 
-
-       
