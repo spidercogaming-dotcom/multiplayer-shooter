@@ -4,93 +4,81 @@
 <title>Rise of Ikons</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-    margin:0;
-    overflow:hidden;
-    background:#111;
-    font-family:Arial;
-}
+
+body { margin:0; overflow:hidden; background:#111; font-family:Arial; }
 
 #menu {
     position:absolute;
-    top:50%;
-    left:50%;
+    top:40%; left:50%;
     transform:translate(-50%,-50%);
-    text-align:center;
-    color:white;
+    text-align:center; color:white;
 }
 
-#menu input, #menu button {
-    padding:10px;
-    font-size:16px;
-    border:none;
-    border-radius:6px;
-}
+button { cursor:pointer; border:none; border-radius:5px; padding:10px; font-weight:bold; }
 
-#menu button {
-    background:gold;
-    cursor:pointer;
+#coinsDisplay { position:absolute; left:20px; top:20px; color:white; display:none; }
+
+#shopBtn { position:absolute; right:20px; top:20px; background:gold; display:none; }
+
+#shopPanel {
+    position:absolute; right:20px; top:60px;
+    background:#222; padding:15px;
+    display:none; color:white; border-radius:8px;
 }
 
 #healthBarContainer {
-    position:absolute;
-    bottom:30px;
-    left:50%;
+    position:absolute; bottom:30px; left:50%;
     transform:translateX(-50%);
-    width:300px;
-    height:25px;
-    background:#333;
-    border-radius:15px;
-    overflow:hidden;
-    display:none;
+    width:300px; height:25px;
+    background:#333; border-radius:15px;
+    overflow:hidden; display:none;
 }
 
-#healthBar {
-    height:100%;
-    width:100%;
-    background:linear-gradient(to right, red, orange);
-}
+#healthBar { height:100%; background:red; width:100%; }
 
-#leaderboard {
+#minimap {
     position:absolute;
-    top:20px;
-    left:20px;
-    background:rgba(0,0,0,0.6);
-    padding:10px;
-    border-radius:8px;
-    color:white;
-    display:none;
+    bottom:20px; right:20px;
+    width:200px; height:200px;
+    background:#000;
+    border:2px solid white;
 }
 
-#coinsDisplay {
+#redOverlay {
     position:absolute;
-    top:20px;
-    right:20px;
-    color:white;
+    width:100%; height:100%;
+    background:red;
+    opacity:0;
+    pointer-events:none;
 }
 
-canvas {
-    display:none;
-}
+canvas { display:none; }
+
 </style>
 </head>
 <body>
 
 <div id="menu">
-    <h1>RISE OF IKONS</h1>
-    <input id="usernameInput" placeholder="Username">
-    <br><br>
-    <button onclick="startGame()">Play</button>
+<h1>RISE OF IKONS</h1>
+<input id="usernameInput" placeholder="Enter Username">
+<br><br>
+<button onclick="startGame()">Play</button>
 </div>
 
-<div id="leaderboard"></div>
 <div id="coinsDisplay"></div>
+<button id="shopBtn" onclick="toggleShop()">Shop</button>
 
-<div id="healthBarContainer">
-    <div id="healthBar"></div>
+<div id="shopPanel">
+<h3>Crates</h3>
+<button onclick="openCrate('rare')">Rare (50)</button>
+<button onclick="openCrate('epic')">Epic (100)</button>
+<button onclick="openCrate('legendary')">Legendary (200)</button>
 </div>
 
+<div id="healthBarContainer"><div id="healthBar"></div></div>
 <canvas id="gameCanvas"></canvas>
+<canvas id="minimap"></canvas>
+<div id="redOverlay"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
