@@ -1,139 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rise of Ikon</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #111;
-            font-family: Arial, sans-serif;
-        }
+<title>Rise of Ikons</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin:0;
+    overflow:hidden;
+    background:#111;
+    font-family:Arial;
+}
 
-        #menu {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            color: white;
-        }
+#menu {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    color:white;
+}
 
-        #menu input {
-            padding: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-        }
+#menu input, #menu button {
+    padding:10px;
+    font-size:16px;
+    border:none;
+    border-radius:6px;
+}
 
-        #menu button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin-top: 10px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background: gold;
-            font-weight: bold;
-        }
+#menu button {
+    background:gold;
+    cursor:pointer;
+}
 
-        #coinsDisplay {
-            position: absolute;
-            left: 20px;
-            top: 20px;
-            color: white;
-            font-size: 18px;
-            display: none;
-        }
+#healthBarContainer {
+    position:absolute;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%);
+    width:300px;
+    height:25px;
+    background:#333;
+    border-radius:15px;
+    overflow:hidden;
+    display:none;
+}
 
-        #shopBtn {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            padding: 10px 15px;
-            background: gold;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            display: none;
-            border-radius: 5px;
-        }
+#healthBar {
+    height:100%;
+    width:100%;
+    background:linear-gradient(to right, red, orange);
+}
 
-        #shopPanel {
-            position: absolute;
-            right: 20px;
-            top: 60px;
-            background: #222;
-            padding: 15px;
-            display: none;
-            color: white;
-            border-radius: 8px;
-            width: 200px;
-        }
+#leaderboard {
+    position:absolute;
+    top:20px;
+    left:20px;
+    background:rgba(0,0,0,0.6);
+    padding:10px;
+    border-radius:8px;
+    color:white;
+    display:none;
+}
 
-        #shopPanel h3 {
-            margin-top: 0;
-        }
+#coinsDisplay {
+    position:absolute;
+    top:20px;
+    right:20px;
+    color:white;
+}
 
-        #shopPanel button {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        .epic { background: purple; color: white; }
-        .rare { background: blue; color: white; }
-        .legendary { background: gold; color: black; }
-
-        canvas {
-            display: none;
-        }
-    </style>
+canvas {
+    display:none;
+}
+</style>
 </head>
 <body>
 
-<!-- MENU -->
 <div id="menu">
-    <h1>RISE OF IKON</h1>
-    <input id="usernameInput" placeholder="Enter Username">
-    <br>
+    <h1>RISE OF IKONS</h1>
+    <input id="usernameInput" placeholder="Username">
+    <br><br>
     <button onclick="startGame()">Play</button>
 </div>
 
-<!-- UI -->
-<div id="coinsDisplay">Coins: 0</div>
-<button id="shopBtn" onclick="toggleShop()">Shop</button>
+<div id="leaderboard"></div>
+<div id="coinsDisplay"></div>
 
-<!-- SHOP PANEL -->
-<div id="shopPanel">
-    <h3>Weapon Crates</h3>
-
-    <button class="epic" onclick="openCrate('epic')">
-        Epic Crate (10 Coins)
-    </button>
-
-    <button class="rare" onclick="openCrate('rare')">
-        Rare Crate (50 Coins)
-    </button>
-
-    <button class="legendary" onclick="openCrate('legendary')">
-        Legendary Crate (100 Coins)
-    </button>
+<div id="healthBarContainer">
+    <div id="healthBar"></div>
 </div>
 
-<!-- GAME CANVAS -->
 <canvas id="gameCanvas"></canvas>
 
-<!-- SOCKET.IO (IMPORTANT FOR RENDER) -->
 <script src="/socket.io/socket.io.js"></script>
-
-<!-- GAME LOGIC -->
 <script src="game.js"></script>
 
 </body>
 </html>
+
