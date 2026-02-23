@@ -1,4 +1,5 @@
 const socket = io();
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -9,12 +10,13 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let players = {};
-let bullets = {};
+let bullets = [];
 let me = null;
 
 function startGame(){
-    const username = document.getElementById("usernameInput").value;
+    const username = document.getElementById("usernameInput").value.trim();
     if(!username) return;
+
     socket.emit("joinGame", username);
 
     document.getElementById("menu").style.display="none";
@@ -25,14 +27,14 @@ function startGame(){
 }
 
 socket.on("gameState", state=>{
-    players = state.players;
-    bullets = state.bullets;
+    players = state.players || {};
+    bullets = state.bullets || [];
     me = players[socket.id];
 });
 
 document.addEventListener("keydown", e=>{
-    const speed=10;
     if(!me) return;
+    const speed = 10;
     if(e.key==="w") socket.emit("move",{dx:0,dy:-speed});
     if(e.key==="s") socket.emit("move",{dx:0,dy:speed});
     if(e.key==="a") socket.emit("move",{dx:-speed,dy:0});
@@ -41,7 +43,11 @@ document.addEventListener("keydown", e=>{
 
 canvas.addEventListener("click", e=>{
     if(!me) return;
-    socket.emit("shoot",{x:e.clientX,y:e.clientY});
+
+    socket.emit("shoot",{
+        x: me.x + (e.clientX - canvas.width/2),
+        y: me.y + (e.clientY - canvas.height/2)
+    });
 });
 
 function toggleShop(){
@@ -51,6 +57,7 @@ function toggleShop(){
 
 function openCrate(type){
     if(!me) return;
+
     let reward;
 
     if(type==="rare"){
@@ -72,30 +79,39 @@ function openCrate(type){
 function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    if(!me) return requestAnimationFrame(draw);
+    if(!me){
+        requestAnimationFrame(draw);
+        return;
+    }
 
     for(let id in players){
         const p=players[id];
         ctx.fillStyle=id===socket.id?"gold":"white";
         ctx.beginPath();
-        ctx.arc(p.x-me.x+canvas.width/2,p.y-me.y+canvas.height/2,20,0,Math.PI*2);
+        ctx.arc(
+            p.x-me.x+canvas.width/2,
+            p.y-me.y+canvas.height/2,
+            20,0,Math.PI*2
+        );
         ctx.fill();
     }
 
     bullets.forEach(b=>{
         ctx.fillStyle="red";
-        ctx.fillRect(b.x-me.x+canvas.width/2,b.y-me.y+canvas.height/2,5,5);
+        ctx.fillRect(
+            b.x-me.x+canvas.width/2,
+            b.y-me.y+canvas.height/2,
+            5,5
+        );
     });
 
     document.getElementById("healthBar").style.width=me.hp+"%";
     document.getElementById("coinsDisplay").innerText="Coins: "+me.coins;
 
-    // red low health effect
     const overlay=document.getElementById("redOverlay");
-    overlay.style.opacity = me.hp<30 ? (0.6-(me.hp/50)) : 0;
+    overlay.style.opacity = me.hp<30 ? (0.7-(me.hp/50)) : 0;
 
-    // minimap
-    miniCtx.clearRect(0,0,minimap.width,minimap.height);
+    miniCtx.clearRect(0,0,200,200);
     for(let id in players){
         const p=players[id];
         miniCtx.fillStyle=id===socket.id?"gold":"white";
@@ -110,6 +126,3 @@ function draw(){
 }
 
 draw();
-
-
-
