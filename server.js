@@ -10,6 +10,9 @@ app.use(express.static("public"));
 const PORT = process.env.PORT || 3000;
 const MAP_WIDTH = 3000;
 const MAP_HEIGHT = 3000;
+const TICK_RATE = 30;
+const PLAYER_SPEED = 5;
+const HIT_RADIUS = 20;
 
 let players = {};
 let bullets = [];
@@ -36,7 +39,10 @@ io.on("connection", (socket) => {
             coins: 10,
             weapon: "pistol",
             lastShot: 0,
-            name: username || "Ikon"
+            name: username || "Ikon",
+            kills: 0,
+            deaths: 0,
+            input: { dx: 0, dy: 0 }
         };
     });
 
@@ -44,11 +50,8 @@ io.on("connection", (socket) => {
         const p = players[socket.id];
         if (!p) return;
 
-        p.x += data.dx * 5;
-        p.y += data.dy * 5;
-
-        p.x = Math.max(0, Math.min(MAP_WIDTH, p.x));
-        p.y = Math.max(0, Math.min(MAP_HEIGHT, p.y));
+        p.input.dx = Math.max(-1, Math.min(1, data.dx));
+        p.input.dy = Math.max(-1, Math.min(1, data.dy));
     });
 
     socket.on("shoot", (angle) => {
@@ -58,6 +61,7 @@ io.on("connection", (socket) => {
         const weapon = weapons[p.weapon];
         const now = Date.now();
         if (now - p.lastShot < weapon.fireRate) return;
+
         p.lastShot = now;
 
         bullets.push({
@@ -70,43 +74,6 @@ io.on("connection", (socket) => {
         });
     });
 
-    socket.on("openCrate", (type) => {
-        const p = players[socket.id];
-        if (!p) return;
-
-        let cost = 0;
-        if (type === "epic") cost = 10;
-        if (type === "rare") cost = 50;
-        if (type === "legendary") cost = 100;
-
-        if (p.coins < cost) return;
-
-        p.coins -= cost;
-
-        let reward;
-
-        if (type === "epic") {
-            reward = "pistol";
-        }
-
-        if (type === "rare") {
-            const rareWeapons = ["rpg", "rifle", "ak47"];
-            reward = rareWeapons[Math.floor(Math.random() * rareWeapons.length)];
-        }
-
-        if (type === "legendary") {
-            const legendaryWeapons = ["sniper", "minigun", "k24", "testy", "laser"];
-            const rand = Math.random();
-            if (rand < 0.4) reward = "sniper";
-            else if (rand < 0.65) reward = "minigun";
-            else if (rand < 0.85) reward = "k24";
-            else if (rand < 0.97) reward = "testy";
-            else reward = "laser";
-        }
-
-        p.weapon = reward;
-    });
-
     socket.on("disconnect", () => {
         delete players[socket.id];
     });
@@ -114,6 +81,24 @@ io.on("connection", (socket) => {
 
 function updateGame() {
 
+    // Move players (server authoritative)
+    for (let id in players) {
+        const p = players[id];
+
+        const mag = Math.sqrt(p.input.dx * p.input.dx + p.input.dy * p.input.dy);
+        if (mag > 0) {
+            const nx = p.input.dx / mag;
+            const ny = p.input.dy / mag;
+
+            p.x += nx * PLAYER_SPEED;
+            p.y += ny * PLAYER_SPEED;
+        }
+
+        p.x = Math.max(0, Math.min(MAP_WIDTH, p.x));
+        p.y = Math.max(0, Math.min(MAP_HEIGHT, p.y));
+    }
+
+    // Update bullets
     for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
 
@@ -132,18 +117,25 @@ function updateGame() {
             const dx = p.x - b.x;
             const dy = p.y - b.y;
 
-            if (Math.sqrt(dx*dx + dy*dy) < 20) {
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < HIT_RADIUS * HIT_RADIUS) {
                 p.hp -= b.damage;
                 bullets.splice(i, 1);
 
                 if (p.hp <= 0) {
                     const killer = players[b.owner];
-                    if (killer) killer.coins += 20;
+                    if (killer) {
+                        killer.kills++;
+                        killer.coins += 20;
+                    }
 
+                    p.deaths++;
                     p.hp = 100;
                     p.x = Math.random() * MAP_WIDTH;
                     p.y = Math.random() * MAP_HEIGHT;
                 }
+
                 break;
             }
         }
@@ -152,8 +144,9 @@ function updateGame() {
     io.volatile.emit("state", { players, bullets });
 }
 
-setInterval(updateGame, 1000/30);
+setInterval(updateGame, 1000 / TICK_RATE);
 
 server.listen(PORT, () => {
-    console.log("Rise of Ikon running on port " + PORT);
+    console.log("Rise of Ikons running on port " + PORT);
 });
+
