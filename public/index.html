@@ -14,16 +14,17 @@ body { margin:0; overflow:hidden; background:#111; font-family:Arial; }
     text-align:center; color:white;
 }
 
-button { cursor:pointer; border:none; border-radius:5px; padding:10px; font-weight:bold; }
+button { padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
 
-#coinsDisplay { position:absolute; left:20px; top:20px; color:white; display:none; }
+#coinsDisplay { position:absolute; top:20px; left:20px; color:white; display:none; }
 
-#shopBtn { position:absolute; right:20px; top:20px; background:gold; display:none; }
+#shopBtn { position:absolute; top:20px; right:20px; display:none; background:gold; }
 
 #shopPanel {
-    position:absolute; right:20px; top:60px;
-    background:#222; padding:15px;
-    display:none; color:white; border-radius:8px;
+    position:absolute; top:60px; right:20px;
+    background:#222; color:white;
+    padding:15px; border-radius:8px;
+    display:none;
 }
 
 #healthBarContainer {
@@ -40,7 +41,7 @@ button { cursor:pointer; border:none; border-radius:5px; padding:10px; font-weig
     position:absolute;
     bottom:20px; right:20px;
     width:200px; height:200px;
-    background:#000;
+    background:black;
     border:2px solid white;
 }
 
@@ -70,14 +71,16 @@ canvas { display:none; }
 
 <div id="shopPanel">
 <h3>Crates</h3>
-<button onclick="openCrate('rare')">Rare (50)</button>
-<button onclick="openCrate('epic')">Epic (100)</button>
+<button onclick="openCrate('rare')">Rare (50)</button><br><br>
+<button onclick="openCrate('epic')">Epic (100)</button><br><br>
 <button onclick="openCrate('legendary')">Legendary (200)</button>
 </div>
 
 <div id="healthBarContainer"><div id="healthBar"></div></div>
+
 <canvas id="gameCanvas"></canvas>
-<canvas id="minimap"></canvas>
+<canvas id="minimap" width="200" height="200"></canvas>
+
 <div id="redOverlay"></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -85,4 +88,3 @@ canvas { display:none; }
 
 </body>
 </html>
-
