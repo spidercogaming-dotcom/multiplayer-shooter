@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io(window.location.origin);
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -126,3 +126,4 @@ function draw(){
 }
 
 draw();
+
