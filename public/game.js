@@ -12,6 +12,7 @@ canvas.height = window.innerHeight;
 let players = {};
 let bullets = [];
 let me = null;
+let keys = {};
 
 function startGame(){
     const username = document.getElementById("usernameInput").value.trim();
@@ -32,14 +33,30 @@ socket.on("gameState", state=>{
     me = players[socket.id];
 });
 
-document.addEventListener("keydown", e=>{
-    if(!me) return;
-    const speed = 10;
-    if(e.key==="w") socket.emit("move",{dx:0,dy:-speed});
-    if(e.key==="s") socket.emit("move",{dx:0,dy:speed});
-    if(e.key==="a") socket.emit("move",{dx:-speed,dy:0});
-    if(e.key==="d") socket.emit("move",{dx:speed,dy:0});
+socket.on("crateReward", reward=>{
+    alert("You got " + reward.toUpperCase());
 });
+
+socket.on("notEnoughCoins", ()=>{
+    alert("Not enough coins!");
+});
+
+document.addEventListener("keydown", e=> keys[e.key]=true);
+document.addEventListener("keyup", e=> keys[e.key]=false);
+
+setInterval(()=>{
+    if(!me) return;
+
+    let dx=0, dy=0;
+    const speed=6;
+
+    if(keys["w"]) dy-=speed;
+    if(keys["s"]) dy+=speed;
+    if(keys["a"]) dx-=speed;
+    if(keys["d"]) dx+=speed;
+
+    if(dx || dy) socket.emit("move",{dx,dy});
+},1000/60);
 
 canvas.addEventListener("click", e=>{
     if(!me) return;
@@ -56,24 +73,7 @@ function toggleShop(){
 }
 
 function openCrate(type){
-    if(!me) return;
-
-    let reward;
-
-    if(type==="rare"){
-        reward = Math.random()<0.6?"pistol":"rifle";
-    }
-    if(type==="epic"){
-        const r=Math.random();
-        reward = r<0.4?"rpg":r<0.7?"ak47":"revolver";
-    }
-    if(type==="legendary"){
-        const r=Math.random();
-        reward = r<0.3?"sniper":r<0.55?"shotgun":r<0.8?"minigun":"laser";
-    }
-
-    socket.emit("setWeapon",reward);
-    alert("You got "+reward.toUpperCase());
+    socket.emit("openCrate", type);
 }
 
 function draw(){
@@ -86,14 +86,17 @@ function draw(){
 
     for(let id in players){
         const p=players[id];
+        const screenX = p.x-me.x+canvas.width/2;
+        const screenY = p.y-me.y+canvas.height/2;
+
         ctx.fillStyle=id===socket.id?"gold":"white";
         ctx.beginPath();
-        ctx.arc(
-            p.x-me.x+canvas.width/2,
-            p.y-me.y+canvas.height/2,
-            20,0,Math.PI*2
-        );
+        ctx.arc(screenX,screenY,20,0,Math.PI*2);
         ctx.fill();
+
+        ctx.fillStyle="white";
+        ctx.font="14px Arial";
+        ctx.fillText(p.username,screenX-20,screenY-30);
     }
 
     bullets.forEach(b=>{
@@ -107,9 +110,18 @@ function draw(){
 
     document.getElementById("healthBar").style.width=me.hp+"%";
     document.getElementById("coinsDisplay").innerText="Coins: "+me.coins;
+    document.getElementById("weaponDisplay").innerText="Weapon: "+me.weapon.toUpperCase();
 
     const overlay=document.getElementById("redOverlay");
     overlay.style.opacity = me.hp<30 ? (0.7-(me.hp/50)) : 0;
+
+    const sorted = Object.values(players)
+        .sort((a,b)=>b.coins-a.coins)
+        .slice(0,5);
+
+    document.getElementById("leaderboard").innerHTML =
+        "<b>Top Ikons</b><br>" +
+        sorted.map(p=>p.username+" - "+p.coins).join("<br>");
 
     miniCtx.clearRect(0,0,200,200);
     for(let id in players){
@@ -126,5 +138,4 @@ function draw(){
 }
 
 draw();
-
 
