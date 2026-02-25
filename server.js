@@ -5,15 +5,10 @@ const path = require("path");
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Proper socket setup for Render
 const io = require("socket.io")(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// ✅ Serve files from public folder
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
@@ -32,6 +27,12 @@ const weapons = {
     shotgun: { damage: 35, fireRate: 600 },
     minigun: { damage: 8, fireRate: 80 },
     laser: { damage: 60, fireRate: 700 }
+};
+
+const crateCosts = {
+    rare: 50,
+    epic: 100,
+    legendary: 200
 };
 
 io.on("connection", socket => {
@@ -76,13 +77,46 @@ io.on("connection", socket => {
             targetX: target.x,
             targetY: target.y,
             owner: socket.id,
-            damage: weapon.damage
+            damage: weapon.damage,
+            createdAt: Date.now()
         });
     });
 
-    socket.on("setWeapon", weapon => {
-        if (weapons[weapon] && players[socket.id]) {
-            players[socket.id].weapon = weapon;
+    socket.on("openCrate", type => {
+        const p = players[socket.id];
+        if (!p || !crateCosts[type]) return;
+
+        if (p.coins < crateCosts[type]) {
+            io.to(socket.id).emit("notEnoughCoins");
+            return;
+        }
+
+        p.coins -= crateCosts[type];
+
+        let reward;
+
+        if (type === "rare") {
+            reward = Math.random() < 0.6 ? "pistol" : "rifle";
+        }
+
+        if (type === "epic") {
+            const r = Math.random();
+            reward = r < 0.4 ? "rpg" :
+                     r < 0.7 ? "ak47" :
+                     "revolver";
+        }
+
+        if (type === "legendary") {
+            const r = Math.random();
+            reward = r < 0.3 ? "sniper" :
+                     r < 0.55 ? "shotgun" :
+                     r < 0.8 ? "minigun" :
+                     "laser";
+        }
+
+        if (weapons[reward]) {
+            p.weapon = reward;
+            io.to(socket.id).emit("crateReward", reward);
         }
     });
 
@@ -94,6 +128,8 @@ io.on("connection", socket => {
 setInterval(() => {
 
     bullets = bullets.filter(b => {
+
+        if (Date.now() - b.createdAt > 1500) return false;
 
         const dx = b.targetX - b.x;
         const dy = b.targetY - b.y;
@@ -117,6 +153,7 @@ setInterval(() => {
                     p.hp = 100;
                     p.x = Math.random() * MAP_SIZE;
                     p.y = Math.random() * MAP_SIZE;
+
                     if (players[b.owner]) {
                         players[b.owner].coins += 20;
                     }
@@ -136,3 +173,4 @@ setInterval(() => {
 server.listen(PORT, () => {
     console.log("Server running on port", PORT);
 });
+
