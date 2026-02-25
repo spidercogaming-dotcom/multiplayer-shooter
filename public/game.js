@@ -1,130 +1,130 @@
-const express = require("express");
-const http = require("http");
-const path = require("path");
+const socket = io();
 
-const app = express();
-const server = http.createServer(app);
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-const io = require("socket.io")(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
+const minimap = document.getElementById("minimap");
+const miniCtx = minimap.getContext("2d");
 
-app.use(express.static(path.join(__dirname, "public")));
-
-const PORT = process.env.PORT || 3000;
-const MAP_SIZE = 3000;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 let players = {};
+let me = null;
+let keys = {};
+let shots = [];
 
-const weapons = {
-    pistol: { damage: 10, fireRate: 400, range: 700 },
-    rifle: { damage: 15, fireRate: 250, range: 800 },
-    rpg: { damage: 40, fireRate: 900, range: 600 },
-    ak47: { damage: 20, fireRate: 180, range: 750 },
-    revolver: { damage: 25, fireRate: 500, range: 650 },
-    sniper: { damage: 50, fireRate: 1000, range: 1200 },
-    shotgun: { damage: 35, fireRate: 600, range: 400 },
-    minigun: { damage: 8, fireRate: 80, range: 700 },
-    laser: { damage: 60, fireRate: 700, range: 1000 }
-};
+function startGame(){
+    const username = document.getElementById("usernameInput").value.trim();
+    if(!username) return;
 
-io.on("connection", socket => {
+    socket.emit("joinGame", username);
 
-    socket.on("joinGame", username => {
-        players[socket.id] = {
-            id: socket.id,
-            username,
-            x: Math.random() * MAP_SIZE,
-            y: Math.random() * MAP_SIZE,
-            hp: 100,
-            coins: 0,
-            weapon: "pistol",
-            lastShot: 0
-        };
-    });
+    document.getElementById("menu").style.display="none";
+    document.getElementById("coinsDisplay").style.display="block";
+    document.getElementById("shopBtn").style.display="block";
+    document.getElementById("healthBarContainer").style.display="block";
+    canvas.style.display="block";
+}
 
-    socket.on("move", data => {
-        const p = players[socket.id];
-        if (!p) return;
+socket.on("gameState", state=>{
+    players = state.players || {};
+    me = players[socket.id];
+});
 
-        p.x += data.dx;
-        p.y += data.dy;
+socket.on("shotFired", data=>{
+    shots.push({ ...data, createdAt: Date.now() });
+});
 
-        p.x = Math.max(0, Math.min(MAP_SIZE, p.x));
-        p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
-    });
+document.addEventListener("keydown", e=> keys[e.key]=true);
+document.addEventListener("keyup", e=> keys[e.key]=false);
 
-    socket.on("shoot", target => {
-        const shooter = players[socket.id];
-        if (!shooter) return;
+setInterval(()=>{
+    if(!me) return;
+    let dx=0, dy=0;
+    const speed=6;
+    if(keys["w"]) dy-=speed;
+    if(keys["s"]) dy+=speed;
+    if(keys["a"]) dx-=speed;
+    if(keys["d"]) dx+=speed;
+    if(dx||dy) socket.emit("move",{dx,dy});
+},1000/60);
 
-        const weapon = weapons[shooter.weapon];
-        const now = Date.now();
+canvas.addEventListener("click", e=>{
+    if(!me) return;
 
-        if (now - shooter.lastShot < weapon.fireRate) return;
-        shooter.lastShot = now;
-
-        const dx = target.x - shooter.x;
-        const dy = target.y - shooter.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist === 0) return;
-
-        const dirX = dx / dist;
-        const dirY = dy / dist;
-
-        const endX = shooter.x + dirX * weapon.range;
-        const endY = shooter.y + dirY * weapon.range;
-
-        for (let id in players) {
-            if (id === socket.id) continue;
-
-            const p = players[id];
-
-            // Distance from player to shot line
-            const A = endY - shooter.y;
-            const B = shooter.x - endX;
-            const C = endX * shooter.y - shooter.x * endY;
-
-            const distanceFromLine =
-                Math.abs(A * p.x + B * p.y + C) /
-                Math.hypot(A, B);
-
-            const withinRange =
-                Math.hypot(p.x - shooter.x, p.y - shooter.y) <= weapon.range;
-
-            if (distanceFromLine < 20 && withinRange) {
-                p.hp -= weapon.damage;
-
-                if (p.hp <= 0) {
-                    p.hp = 100;
-                    p.x = Math.random() * MAP_SIZE;
-                    p.y = Math.random() * MAP_SIZE;
-                    shooter.coins += 20;
-                }
-
-                break;
-            }
-        }
-
-        // Visual tracer effect
-        io.emit("shotFired", {
-            x1: shooter.x,
-            y1: shooter.y,
-            x2: endX,
-            y2: endY
-        });
-    });
-
-    socket.on("disconnect", () => {
-        delete players[socket.id];
+    socket.emit("shoot",{
+        x: me.x + (e.clientX - canvas.width/2),
+        y: me.y + (e.clientY - canvas.height/2)
     });
 });
 
-setInterval(() => {
-    io.emit("gameState", { players });
-}, 1000 / 60);
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(!me){ requestAnimationFrame(draw); return; }
 
-server.listen(PORT, () => {
-    console.log("Server running on port", PORT);
-});
+    // arena grid
+    ctx.strokeStyle="rgba(255,255,255,0.05)";
+    for(let i=0;i<3000;i+=100){
+        ctx.beginPath();
+        ctx.moveTo(i-me.x+canvas.width/2,0);
+        ctx.lineTo(i-me.x+canvas.width/2,canvas.height);
+        ctx.stroke();
+    }
+
+    // players
+    for(let id in players){
+        const p=players[id];
+        const sx=p.x-me.x+canvas.width/2;
+        const sy=p.y-me.y+canvas.height/2;
+
+        ctx.shadowBlur=20;
+        ctx.shadowColor=id===socket.id?"gold":"white";
+
+        ctx.fillStyle=id===socket.id?"gold":"white";
+        ctx.beginPath();
+        ctx.arc(sx,sy,20,0,Math.PI*2);
+        ctx.fill();
+
+        ctx.shadowBlur=0;
+        ctx.fillStyle="white";
+        ctx.font="bold 14px Arial";
+        ctx.fillText(p.username,sx-20,sy-30);
+    }
+
+    // tracers
+    shots = shots.filter(s=>{
+        if(Date.now()-s.createdAt>100) return false;
+
+        ctx.strokeStyle="rgba(255,0,0,0.9)";
+        ctx.lineWidth=3;
+        ctx.beginPath();
+        ctx.moveTo(
+            s.x1-me.x+canvas.width/2,
+            s.y1-me.y+canvas.height/2
+        );
+        ctx.lineTo(
+            s.x2-me.x+canvas.width/2,
+            s.y2-me.y+canvas.height/2
+        );
+        ctx.stroke();
+
+        return true;
+    });
+
+    document.getElementById("healthBar").style.width=me.hp+"%";
+    document.getElementById("coinsDisplay").innerText="Coins: "+me.coins;
+    document.getElementById("weaponDisplay").innerText="Weapon: "+me.weapon.toUpperCase();
+
+    miniCtx.clearRect(0,0,200,200);
+    for(let id in players){
+        const p=players[id];
+        miniCtx.fillStyle=id===socket.id?"gold":"white";
+        miniCtx.fillRect((p.x/3000)*200,(p.y/3000)*200,4,4);
+    }
+
+    requestAnimationFrame(draw);
+}
+
+draw();
 
