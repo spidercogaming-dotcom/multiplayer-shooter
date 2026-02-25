@@ -67,8 +67,8 @@ io.on("connection", socket => {
 
         const weapon = weapons[p.weapon];
         const now = Date.now();
-
         if (now - p.lastShot < weapon.fireRate) return;
+
         p.lastShot = now;
 
         bullets.push({
@@ -94,18 +94,15 @@ io.on("connection", socket => {
         p.coins -= crateCosts[type];
 
         let reward;
-
         if (type === "rare") {
             reward = Math.random() < 0.6 ? "pistol" : "rifle";
         }
-
         if (type === "epic") {
             const r = Math.random();
             reward = r < 0.4 ? "rpg" :
                      r < 0.7 ? "ak47" :
                      "revolver";
         }
-
         if (type === "legendary") {
             const r = Math.random();
             reward = r < 0.3 ? "sniper" :
@@ -158,11 +155,9 @@ setInterval(() => {
                         players[b.owner].coins += 20;
                     }
                 }
-
                 return false;
             }
         }
-
         return true;
     });
 
