@@ -15,24 +15,17 @@ const PORT = process.env.PORT || 3000;
 const MAP_SIZE = 3000;
 
 let players = {};
-let bullets = [];
 
 const weapons = {
-    pistol: { damage: 10, fireRate: 400 },
-    rifle: { damage: 15, fireRate: 250 },
-    rpg: { damage: 40, fireRate: 900 },
-    ak47: { damage: 20, fireRate: 180 },
-    revolver: { damage: 25, fireRate: 500 },
-    sniper: { damage: 50, fireRate: 1000 },
-    shotgun: { damage: 35, fireRate: 600 },
-    minigun: { damage: 8, fireRate: 80 },
-    laser: { damage: 60, fireRate: 700 }
-};
-
-const crateCosts = {
-    rare: 50,
-    epic: 100,
-    legendary: 200
+    pistol: { damage: 10, fireRate: 400, range: 700 },
+    rifle: { damage: 15, fireRate: 250, range: 800 },
+    rpg: { damage: 40, fireRate: 900, range: 600 },
+    ak47: { damage: 20, fireRate: 180, range: 750 },
+    revolver: { damage: 25, fireRate: 500, range: 650 },
+    sniper: { damage: 50, fireRate: 1000, range: 1200 },
+    shotgun: { damage: 35, fireRate: 600, range: 400 },
+    minigun: { damage: 8, fireRate: 80, range: 700 },
+    laser: { damage: 60, fireRate: 700, range: 1000 }
 };
 
 io.on("connection", socket => {
@@ -62,59 +55,64 @@ io.on("connection", socket => {
     });
 
     socket.on("shoot", target => {
-        const p = players[socket.id];
-        if (!p) return;
+        const shooter = players[socket.id];
+        if (!shooter) return;
 
-        const weapon = weapons[p.weapon];
+        const weapon = weapons[shooter.weapon];
         const now = Date.now();
-        if (now - p.lastShot < weapon.fireRate) return;
 
-        p.lastShot = now;
+        if (now - shooter.lastShot < weapon.fireRate) return;
+        shooter.lastShot = now;
 
-        bullets.push({
-            x: p.x,
-            y: p.y,
-            targetX: target.x,
-            targetY: target.y,
-            owner: socket.id,
-            damage: weapon.damage,
-            createdAt: Date.now()
+        const dx = target.x - shooter.x;
+        const dy = target.y - shooter.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist === 0) return;
+
+        const dirX = dx / dist;
+        const dirY = dy / dist;
+
+        const endX = shooter.x + dirX * weapon.range;
+        const endY = shooter.y + dirY * weapon.range;
+
+        for (let id in players) {
+            if (id === socket.id) continue;
+
+            const p = players[id];
+
+            // Distance from player to shot line
+            const A = endY - shooter.y;
+            const B = shooter.x - endX;
+            const C = endX * shooter.y - shooter.x * endY;
+
+            const distanceFromLine =
+                Math.abs(A * p.x + B * p.y + C) /
+                Math.hypot(A, B);
+
+            const withinRange =
+                Math.hypot(p.x - shooter.x, p.y - shooter.y) <= weapon.range;
+
+            if (distanceFromLine < 20 && withinRange) {
+                p.hp -= weapon.damage;
+
+                if (p.hp <= 0) {
+                    p.hp = 100;
+                    p.x = Math.random() * MAP_SIZE;
+                    p.y = Math.random() * MAP_SIZE;
+                    shooter.coins += 20;
+                }
+
+                break;
+            }
+        }
+
+        // Visual tracer effect
+        io.emit("shotFired", {
+            x1: shooter.x,
+            y1: shooter.y,
+            x2: endX,
+            y2: endY
         });
-    });
-
-    socket.on("openCrate", type => {
-        const p = players[socket.id];
-        if (!p || !crateCosts[type]) return;
-
-        if (p.coins < crateCosts[type]) {
-            io.to(socket.id).emit("notEnoughCoins");
-            return;
-        }
-
-        p.coins -= crateCosts[type];
-
-        let reward;
-        if (type === "rare") {
-            reward = Math.random() < 0.6 ? "pistol" : "rifle";
-        }
-        if (type === "epic") {
-            const r = Math.random();
-            reward = r < 0.4 ? "rpg" :
-                     r < 0.7 ? "ak47" :
-                     "revolver";
-        }
-        if (type === "legendary") {
-            const r = Math.random();
-            reward = r < 0.3 ? "sniper" :
-                     r < 0.55 ? "shotgun" :
-                     r < 0.8 ? "minigun" :
-                     "laser";
-        }
-
-        if (weapons[reward]) {
-            p.weapon = reward;
-            io.to(socket.id).emit("crateReward", reward);
-        }
     });
 
     socket.on("disconnect", () => {
@@ -123,46 +121,7 @@ io.on("connection", socket => {
 });
 
 setInterval(() => {
-
-    bullets = bullets.filter(b => {
-
-        if (Date.now() - b.createdAt > 1500) return false;
-
-        const dx = b.targetX - b.x;
-        const dy = b.targetY - b.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist === 0) return false;
-
-        b.x += (dx / dist) * 20;
-        b.y += (dy / dist) * 20;
-
-        for (let id in players) {
-            if (id === b.owner) continue;
-
-            const p = players[id];
-            const d = Math.hypot(p.x - b.x, p.y - b.y);
-
-            if (d < 20) {
-                p.hp -= b.damage;
-
-                if (p.hp <= 0) {
-                    p.hp = 100;
-                    p.x = Math.random() * MAP_SIZE;
-                    p.y = Math.random() * MAP_SIZE;
-
-                    if (players[b.owner]) {
-                        players[b.owner].coins += 20;
-                    }
-                }
-                return false;
-            }
-        }
-        return true;
-    });
-
-    io.emit("gameState", { players, bullets });
-
+    io.emit("gameState", { players });
 }, 1000 / 60);
 
 server.listen(PORT, () => {
