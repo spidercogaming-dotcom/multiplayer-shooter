@@ -1,10 +1,11 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Proper socket.io setup for Render
+// ✅ Proper socket setup for Render
 const io = require("socket.io")(server, {
     cors: {
         origin: "*",
@@ -12,7 +13,8 @@ const io = require("socket.io")(server, {
     }
 });
 
-app.use(express.static(__dirname));
+// ✅ Serve files from public folder
+app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
 const MAP_SIZE = 3000;
