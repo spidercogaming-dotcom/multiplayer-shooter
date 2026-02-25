@@ -1,31 +1,24 @@
 const express = require("express");
 const http = require("http");
-const path = require("path");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server);
 
-const io = require("socket.io")(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
+app.use(express.static("public"));
 
-app.use(express.static(path.join(__dirname, "public")));
-
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const MAP_SIZE = 3000;
 
-let players = {};
+const players = {};
 
 const weapons = {
-    pistol: { damage: 10, fireRate: 400, range: 700 },
-    rifle: { damage: 15, fireRate: 250, range: 800 },
-    rpg: { damage: 40, fireRate: 900, range: 600 },
-    ak47: { damage: 20, fireRate: 180, range: 750 },
-    revolver: { damage: 25, fireRate: 500, range: 650 },
-    sniper: { damage: 50, fireRate: 1000, range: 1200 },
-    shotgun: { damage: 35, fireRate: 600, range: 400 },
-    minigun: { damage: 8, fireRate: 80, range: 700 },
-    laser: { damage: 60, fireRate: 700, range: 1000 }
+    pistol: { damage: 20, fireRate: 400, range: 700 },
+    rifle: { damage: 15, fireRate: 150, range: 900 },
+    sniper: { damage: 60, fireRate: 900, range: 1500 },
+    shotgun: { damage: 35, fireRate: 700, range: 500 },
+    minigun: { damage: 8, fireRate: 80, range: 800 }
 };
 
 io.on("connection", socket => {
@@ -54,6 +47,13 @@ io.on("connection", socket => {
         p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
     });
 
+    socket.on("setWeapon", weapon => {
+        if (weapons[weapon]) {
+            players[socket.id].weapon = weapon;
+        }
+    });
+
+    // 🔥 FIXED SHOOT SYSTEM
     socket.on("shoot", target => {
         const shooter = players[socket.id];
         if (!shooter) return;
@@ -72,46 +72,46 @@ io.on("connection", socket => {
         const dirX = dx / dist;
         const dirY = dy / dist;
 
-        const endX = shooter.x + dirX * weapon.range;
-        const endY = shooter.y + dirY * weapon.range;
+        const maxRange = weapon.range;
+        const stepSize = 15;
 
-        for (let id in players) {
-            if (id === socket.id) continue;
+        let hitX = shooter.x;
+        let hitY = shooter.y;
+        let hit = false;
 
-            const p = players[id];
+        for (let i = 0; i < maxRange; i += stepSize) {
+            hitX = shooter.x + dirX * i;
+            hitY = shooter.y + dirY * i;
 
-            // Distance from player to shot line
-            const A = endY - shooter.y;
-            const B = shooter.x - endX;
-            const C = endX * shooter.y - shooter.x * endY;
+            for (let id in players) {
+                if (id === socket.id) continue;
 
-            const distanceFromLine =
-                Math.abs(A * p.x + B * p.y + C) /
-                Math.hypot(A, B);
+                const p = players[id];
+                const d = Math.hypot(p.x - hitX, p.y - hitY);
 
-            const withinRange =
-                Math.hypot(p.x - shooter.x, p.y - shooter.y) <= weapon.range;
+                if (d < 20) {
+                    p.hp -= weapon.damage;
 
-            if (distanceFromLine < 20 && withinRange) {
-                p.hp -= weapon.damage;
+                    if (p.hp <= 0) {
+                        p.hp = 100;
+                        p.x = Math.random() * MAP_SIZE;
+                        p.y = Math.random() * MAP_SIZE;
+                        shooter.coins += 20;
+                    }
 
-                if (p.hp <= 0) {
-                    p.hp = 100;
-                    p.x = Math.random() * MAP_SIZE;
-                    p.y = Math.random() * MAP_SIZE;
-                    shooter.coins += 20;
+                    hit = true;
+                    break;
                 }
-
-                break;
             }
+
+            if (hit) break;
         }
 
-        // Visual tracer effect
         io.emit("shotFired", {
             x1: shooter.x,
             y1: shooter.y,
-            x2: endX,
-            y2: endY
+            x2: hitX,
+            y2: hitY
         });
     });
 
@@ -125,6 +125,6 @@ setInterval(() => {
 }, 1000 / 60);
 
 server.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+    console.log("Server running on port " + PORT);
 });
 
