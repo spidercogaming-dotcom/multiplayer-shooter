@@ -1,30 +1,28 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "*"
+        origin: "*",
+        methods: ["GET", "POST"]
     }
 });
 
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
 const MAP_SIZE = 3000;
 
 const players = {};
 
-const weapons = {
-    pistol: { damage: 20, fireRate: 400, range: 800 }
-};
+io.on("connection", (socket) => {
 
-io.on("connection", socket => {
-
-    socket.on("joinGame", username => {
+    socket.on("joinGame", (username) => {
         players[socket.id] = {
             id: socket.id,
             username,
@@ -35,7 +33,7 @@ io.on("connection", socket => {
         };
     });
 
-    socket.on("move", data => {
+    socket.on("move", (data) => {
         const p = players[socket.id];
         if (!p) return;
 
@@ -46,14 +44,12 @@ io.on("connection", socket => {
         p.y = Math.max(0, Math.min(MAP_SIZE, p.y));
     });
 
-    socket.on("shoot", target => {
+    socket.on("shoot", (target) => {
         const shooter = players[socket.id];
         if (!shooter) return;
 
-        const weapon = weapons.pistol;
         const now = Date.now();
-
-        if (now - shooter.lastShot < weapon.fireRate) return;
+        if (now - shooter.lastShot < 400) return;
         shooter.lastShot = now;
 
         const dx = target.x - shooter.x;
@@ -64,11 +60,10 @@ io.on("connection", socket => {
         const dirX = dx / dist;
         const dirY = dy / dist;
 
-        const stepSize = 15;
         let hitX = shooter.x;
         let hitY = shooter.y;
 
-        for (let i = 0; i < weapon.range; i += stepSize) {
+        for (let i = 0; i < 800; i += 15) {
             hitX = shooter.x + dirX * i;
             hitY = shooter.y + dirY * i;
 
@@ -79,7 +74,7 @@ io.on("connection", socket => {
                 const d = Math.hypot(p.x - hitX, p.y - hitY);
 
                 if (d < 20) {
-                    p.hp -= weapon.damage;
+                    p.hp -= 20;
 
                     if (p.hp <= 0) {
                         p.hp = 100;
@@ -87,7 +82,7 @@ io.on("connection", socket => {
                         p.y = Math.random() * MAP_SIZE;
                     }
 
-                    i = weapon.range;
+                    i = 800;
                     break;
                 }
             }
@@ -111,6 +106,5 @@ setInterval(() => {
 }, 1000 / 60);
 
 server.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+    console.log("Server running on port " + PORT);
 });
-
