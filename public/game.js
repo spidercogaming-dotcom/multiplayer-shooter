@@ -13,7 +13,6 @@ function startGame() {
     const username = document.getElementById("usernameInput").value || "Player";
     document.getElementById("menu").style.display = "none";
     canvas.style.display = "block";
-
     socket.emit("joinGame", username);
 }
 
@@ -47,6 +46,8 @@ socket.on("gameState", serverPlayers => {
 });
 
 socket.on("shotFired", data => {
+    if (!me) return;
+
     ctx.strokeStyle = "yellow";
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -85,3 +86,5 @@ function gameLoop() {
 }
 
 gameLoop();
+
+
