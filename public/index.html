@@ -4,88 +4,9 @@
 <title>Rise of Ikons</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{
-    margin:0;
-    overflow:hidden;
-    background: radial-gradient(circle,#1a1a1a,#0a0a0a);
-    font-family:Arial Black, Arial;
-    color:white;
-}
-
-#menu{
-    position:absolute;
-    top:50%;left:50%;
-    transform:translate(-50%,-50%);
-    text-align:center;
-}
-
-#menu h1{
-    font-size:60px;
-    color:gold;
-    text-shadow:0 0 20px gold;
-}
-
-input{
-    padding:12px;
-    border-radius:8px;
-    border:none;
-    background:#222;
-    color:white;
-    text-align:center;
-}
-
-button{
-    padding:12px 18px;
-    border-radius:10px;
-    border:none;
-    font-weight:bold;
-    background:linear-gradient(45deg,#ffcc00,#ffaa00);
-    cursor:pointer;
-    box-shadow:0 0 15px rgba(255,200,0,0.6);
-}
-
-button:hover{
-    transform:scale(1.08);
-}
-
-#coinsDisplay{position:absolute;top:20px;left:20px;}
-#leaderboard{position:absolute;top:70px;left:20px;}
-#shopBtn{position:absolute;top:20px;right:20px;}
-#shopPanel{
-    position:absolute;
-    top:60px;right:20px;
-    background:rgba(0,0,0,0.9);
-    padding:15px;
-    border-radius:12px;
-    display:none;
-}
-#healthBarContainer{
-    position:absolute;
-    bottom:30px;left:50%;
-    transform:translateX(-50%);
-    width:320px;height:28px;
-    background:#222;
-    border-radius:20px;
-    overflow:hidden;
-}
-#healthBar{
-    height:100%;
-    background:linear-gradient(to right,#ff3333,#aa0000);
-    width:100%;
-}
-#weaponDisplay{
-    position:absolute;
-    bottom:75px;left:50%;
-    transform:translateX(-50%);
-}
-#minimap{
-    position:absolute;
-    bottom:20px;right:20px;
-    width:200px;height:200px;
-    background:black;
-    border:2px solid white;
-}
-canvas{display:none;}
+body { margin:0; overflow:hidden; background:#111; color:white; font-family:Arial; }
+#menu { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+canvas { display:none; background:#181818; }
 </style>
 </head>
 <body>
@@ -97,25 +18,7 @@ canvas{display:none;}
 <button onclick="startGame()">Play</button>
 </div>
 
-<div id="coinsDisplay"></div>
-<div id="leaderboard"></div>
-<button id="shopBtn" onclick="toggleShop()">Shop</button>
-
-<div id="shopPanel">
-<h3>Crates</h3>
-<button onclick="openCrate('rare')">Rare (50)</button><br><br>
-<button onclick="openCrate('epic')">Epic (100)</button><br><br>
-<button onclick="openCrate('legendary')">Legendary (200)</button>
-</div>
-
-<div id="weaponDisplay"></div>
-
-<div id="healthBarContainer">
-<div id="healthBar"></div>
-</div>
-
 <canvas id="gameCanvas"></canvas>
-<canvas id="minimap" width="200" height="200"></canvas>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
