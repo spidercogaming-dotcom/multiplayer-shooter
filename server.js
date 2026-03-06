@@ -7,13 +7,12 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server,{
-    cors:{origin:"*"}
+cors:{origin:"*"}
 });
 
 app.use(express.static(path.join(__dirname,"public")));
 
 const PORT = process.env.PORT || 3000;
-
 const MAP_SIZE = 3000;
 
 let players = {};
@@ -22,7 +21,7 @@ let bullets = [];
 const weapons = {
 
 pistol:{damage:10,rate:400},
-rifle:{damage:14,rate:250},
+rifle:{damage:15,rate:250},
 
 bazooka:{damage:40,rate:900},
 rpg:{damage:35,rate:850},
@@ -45,7 +44,7 @@ name,
 x:Math.random()*MAP_SIZE,
 y:Math.random()*MAP_SIZE,
 hp:100,
-coins:100,
+coins:0,
 weapon:"pistol",
 skin:"gold",
 lastShot:0
@@ -75,13 +74,13 @@ if(!p) return;
 const weapon=weapons[p.weapon];
 const now=Date.now();
 
-if(now-p.lastShot<weapon.rate) return;
+if(now-p.lastShot < weapon.rate) return;
 
-p.lastShot=now;
+p.lastShot = now;
 
-const dx=target.x-p.x;
-const dy=target.y-p.y;
-const dist=Math.hypot(dx,dy);
+const dx = target.x - p.x;
+const dy = target.y - p.y;
+const dist = Math.hypot(dx,dy);
 
 bullets.push({
 
@@ -96,19 +95,67 @@ owner:socket.id
 
 });
 
-socket.on("setWeapon",w=>{
+socket.on("setSkin",color=>{
 
-if(players[socket.id] && weapons[w]){
-players[socket.id].weapon=w;
+if(players[socket.id]){
+players[socket.id].skin=color;
 }
 
 });
 
-socket.on("setSkin",s=>{
+socket.on("openCrate",type=>{
 
-if(players[socket.id]){
-players[socket.id].skin=s;
+const p = players[socket.id];
+if(!p) return;
+
+let cost = 0;
+let reward;
+
+if(type==="epic"){
+
+cost=50;
+
+if(p.coins < cost){
+socket.emit("notEnoughCoins");
+return;
 }
+
+reward = Math.random()<0.5 ? "pistol" : "rifle";
+
+}
+
+if(type==="rare"){
+
+cost=100;
+
+if(p.coins < cost){
+socket.emit("notEnoughCoins");
+return;
+}
+
+let r=Math.random();
+reward = r<0.33?"bazooka":r<0.66?"rpg":"smg";
+
+}
+
+if(type==="legendary"){
+
+cost=200;
+
+if(p.coins < cost){
+socket.emit("notEnoughCoins");
+return;
+}
+
+let r=Math.random();
+reward = r<0.33?"sniper":r<0.66?"laser":"minigun";
+
+}
+
+p.coins -= cost;
+p.weapon = reward;
+
+socket.emit("crateReward",reward);
 
 });
 
@@ -129,12 +176,12 @@ for(let id in players){
 
 if(id===b.owner) continue;
 
-const p=players[id];
-const d=Math.hypot(p.x-b.x,p.y-b.y);
+const p = players[id];
+const d = Math.hypot(p.x-b.x,p.y-b.y);
 
 if(d<20){
 
-p.hp-=b.damage;
+p.hp -= b.damage;
 
 if(p.hp<=0){
 
@@ -143,7 +190,7 @@ p.x=Math.random()*MAP_SIZE;
 p.y=Math.random()*MAP_SIZE;
 
 if(players[b.owner]){
-players[b.owner].coins+=20;
+players[b.owner].coins += 20;
 }
 
 }
@@ -156,7 +203,7 @@ b.dead=true;
 
 });
 
-bullets=bullets.filter(b=>!b.dead);
+bullets = bullets.filter(b=>!b.dead);
 
 io.emit("gameState",{players,bullets});
 
@@ -167,3 +214,5 @@ server.listen(PORT,()=>{
 console.log("Server running");
 
 });
+
+
