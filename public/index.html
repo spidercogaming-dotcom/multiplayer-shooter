@@ -1,27 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <title>Rise of Ikons</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-body { margin:0; overflow:hidden; background:#111; color:white; font-family:Arial; }
-#menu { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); text-align:center; }
-canvas { display:none; background:#181818; }
+
+body{
+margin:0;
+overflow:hidden;
+background:#0b0b0b;
+font-family:Arial;
+color:white;
+}
+
+#menu{
+position:absolute;
+top:40%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+}
+
+canvas{
+display:none;
+}
+
 </style>
+
 </head>
+
 <body>
 
 <div id="menu">
+
 <h1>RISE OF IKONS</h1>
-<input id="usernameInput" placeholder="Enter Username">
+
+<input id="username" placeholder="Username">
+
 <br><br>
+
 <button onclick="startGame()">Play</button>
+
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="game"></canvas>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 
 </body>
 </html>
+
