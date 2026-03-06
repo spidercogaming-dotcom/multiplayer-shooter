@@ -6,100 +6,137 @@ const path = require("path");
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server,{
-    cors:{origin:"*"}
-});
+const io = new Server(server,{cors:{origin:"*"}});
 
 app.use(express.static(path.join(__dirname,"public")));
 
 const PORT = process.env.PORT || 3000;
-
 const MAP_SIZE = 3000;
 
 let players = {};
 let bullets = [];
 
+const weapons={
+pistol:{damage:15},
+rifle:{damage:20},
+bazooka:{damage:40},
+rpg:{damage:35},
+smg:{damage:10},
+sniper:{damage:60},
+laser:{damage:50},
+minigun:{damage:8}
+};
+
 io.on("connection",socket=>{
 
-    socket.on("joinGame",username=>{
-        players[socket.id]={
-            id:socket.id,
-            username,
-            x:Math.random()*MAP_SIZE,
-            y:Math.random()*MAP_SIZE,
-            hp:100
-        };
-    });
+socket.on("joinGame",name=>{
 
-    socket.on("move",data=>{
-        const p=players[socket.id];
-        if(!p) return;
+players[socket.id]={
+id:socket.id,
+name,
+x:Math.random()*MAP_SIZE,
+y:Math.random()*MAP_SIZE,
+hp:100,
+coins:0,
+weapon:"pistol",
+skin:"gold"
+};
 
-        p.x+=data.dx;
-        p.y+=data.dy;
+});
 
-        p.x=Math.max(0,Math.min(MAP_SIZE,p.x));
-        p.y=Math.max(0,Math.min(MAP_SIZE,p.y));
-    });
+socket.on("move",data=>{
 
-    socket.on("shoot",target=>{
-        const p=players[socket.id];
-        if(!p) return;
+const p=players[socket.id];
+if(!p)return;
 
-        const dx=target.x-p.x;
-        const dy=target.y-p.y;
-        const dist=Math.hypot(dx,dy);
+p.x+=data.dx;
+p.y+=data.dy;
 
-        const speed=20;
+p.x=Math.max(0,Math.min(MAP_SIZE,p.x));
+p.y=Math.max(0,Math.min(MAP_SIZE,p.y);
 
-        bullets.push({
-            x:p.x,
-            y:p.y,
-            vx:(dx/dist)*speed,
-            vy:(dy/dist)*speed,
-            owner:socket.id
-        });
-    });
+});
 
-    socket.on("disconnect",()=>{
-        delete players[socket.id];
-    });
+socket.on("shoot",target=>{
+
+const p=players[socket.id];
+if(!p)return;
+
+const dx=target.x-p.x;
+const dy=target.y-p.y;
+const dist=Math.hypot(dx,dy);
+
+const speed=20;
+
+bullets.push({
+x:p.x,
+y:p.y,
+vx:(dx/dist)*speed,
+vy:(dy/dist)*speed,
+owner:socket.id,
+damage:weapons[p.weapon].damage
+});
+
+});
+
+socket.on("setWeapon",w=>{
+if(players[socket.id]) players[socket.id].weapon=w;
+});
+
+socket.on("setSkin",s=>{
+if(players[socket.id]) players[socket.id].skin=s;
+});
+
+socket.on("disconnect",()=>{
+delete players[socket.id];
+});
 
 });
 
 setInterval(()=>{
 
-    bullets.forEach(b=>{
-        b.x+=b.vx;
-        b.y+=b.vy;
+bullets.forEach(b=>{
 
-        for(let id in players){
-            if(id===b.owner) continue;
+b.x+=b.vx;
+b.y+=b.vy;
 
-            const p=players[id];
-            const d=Math.hypot(p.x-b.x,p.y-b.y);
+for(let id in players){
 
-            if(d<20){
-                p.hp-=20;
+if(id===b.owner) continue;
 
-                if(p.hp<=0){
-                    p.hp=100;
-                    p.x=Math.random()*MAP_SIZE;
-                    p.y=Math.random()*MAP_SIZE;
-                }
+const p=players[id];
 
-                b.dead=true;
-            }
-        }
-    });
+const d=Math.hypot(p.x-b.x,p.y-b.y);
 
-    bullets=bullets.filter(b=>!b.dead);
+if(d<20){
 
-    io.emit("gameState",{players,bullets});
+p.hp-=b.damage;
+
+if(p.hp<=0){
+
+p.hp=100;
+p.x=Math.random()*MAP_SIZE;
+p.y=Math.random()*MAP_SIZE;
+
+if(players[b.owner])
+players[b.owner].coins+=20;
+
+}
+
+b.dead=true;
+
+}
+
+}
+
+});
+
+bullets=bullets.filter(b=>!b.dead);
+
+io.emit("gameState",{players,bullets});
 
 },1000/60);
 
-server.listen(PORT,()=>{
-    console.log("Server running");
-});
+server.listen(PORT,()=>console.log("Server running"));
+
 
