@@ -34,45 +34,7 @@ s.style.display=s.style.display==="block"?"none":"block";
 
 function crate(type){
 
-if(!me) return;
-
-let cost=0;
-let reward;
-
-if(type==="epic"){
-
-cost=50;
-if(me.coins<cost){alert("Not enough coins");return;}
-
-reward=Math.random()<0.5?"pistol":"rifle";
-
-}
-
-if(type==="rare"){
-
-cost=100;
-if(me.coins<cost){alert("Not enough coins");return;}
-
-let r=Math.random();
-reward=r<0.33?"bazooka":r<0.66?"rpg":"smg";
-
-}
-
-if(type==="legendary"){
-
-cost=200;
-if(me.coins<cost){alert("Not enough coins");return;}
-
-let r=Math.random();
-reward=r<0.33?"sniper":r<0.66?"laser":"minigun";
-
-}
-
-me.coins-=cost;
-
-socket.emit("setWeapon",reward);
-
-alert("You got "+reward);
+socket.emit("openCrate",type);
 
 }
 
@@ -81,6 +43,18 @@ function skin(color){
 socket.emit("setSkin",color);
 
 }
+
+socket.on("notEnoughCoins",()=>{
+
+alert("Not enough coins!");
+
+});
+
+socket.on("crateReward",weapon=>{
+
+alert("You got "+weapon.toUpperCase());
+
+});
 
 document.addEventListener("keydown",e=>{
 
@@ -162,7 +136,7 @@ for(let id in players){
 
 const p=players[id];
 
-ctx.fillStyle=p.skin||"white";
+ctx.fillStyle=p.skin;
 
 ctx.beginPath();
 
@@ -217,4 +191,3 @@ miniCtx.fillRect(
 }
 
 gameLoop();
-
