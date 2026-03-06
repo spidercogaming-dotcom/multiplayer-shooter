@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <title>Rise of Ikons</title>
@@ -9,64 +10,64 @@
 body{
 margin:0;
 overflow:hidden;
-background:#0f172a;
+background:#0a0a0a;
 font-family:Arial;
 color:white;
 }
 
 #menu{
+
 position:absolute;
 top:40%;
 left:50%;
 transform:translate(-50%,-50%);
 text-align:center;
+
 }
 
 #shopBtn{
+
 position:absolute;
 top:20px;
 right:20px;
-padding:10px;
-background:gold;
-border:none;
-display:none;
+
 }
 
 #coins{
+
 position:absolute;
 top:20px;
 left:20px;
-display:none;
+
 }
 
 #shop{
+
 position:absolute;
 top:70px;
 right:20px;
-background:#1e293b;
+background:#222;
 padding:15px;
 border-radius:10px;
 display:none;
-}
 
-#minimap{
-position:absolute;
-bottom:20px;
-right:20px;
-border:2px solid white;
-background:black;
 }
 
 canvas{
 display:none;
 }
 
-button{
-padding:8px;
-margin:5px;
+#minimap{
+
+position:absolute;
+bottom:20px;
+right:20px;
+border:2px solid white;
+
 }
 
 </style>
+
 </head>
 
 <body>
@@ -75,7 +76,7 @@ margin:5px;
 
 <h1>RISE OF IKONS</h1>
 
-<input id="name" placeholder="Username">
+<input id="username" placeholder="Username">
 
 <br><br>
 
@@ -89,11 +90,14 @@ margin:5px;
 
 <div id="shop">
 
-<h3>Crates</h3>
+<h3>Epic Crate (50)</h3>
+<button onclick="crate('epic')">Open</button>
 
-<button onclick="crate('epic')">Epic</button>
-<button onclick="crate('rare')">Rare</button>
-<button onclick="crate('legendary')">Legendary</button>
+<h3>Rare Crate (100)</h3>
+<button onclick="crate('rare')">Open</button>
+
+<h3>Legendary Crate (200)</h3>
+<button onclick="crate('legendary')">Open</button>
 
 <h3>Skins</h3>
 
@@ -110,4 +114,5 @@ margin:5px;
 <script src="game.js"></script>
 
 </body>
+
 </html>
