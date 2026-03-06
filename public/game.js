@@ -1,90 +1,130 @@
-const socket = io();
+const socket=io();
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
-let me = null;
-let players = {};
+let players={};
+let bullets=[];
+let me=null;
 
-function startGame() {
-    const username = document.getElementById("usernameInput").value || "Player";
-    document.getElementById("menu").style.display = "none";
-    canvas.style.display = "block";
-    socket.emit("joinGame", username);
+function startGame(){
+
+const name=document.getElementById("username").value||"Player";
+
+document.getElementById("menu").style.display="none";
+canvas.style.display="block";
+
+socket.emit("joinGame",name);
+
 }
 
-document.addEventListener("keydown", e => {
-    if (!me) return;
+document.addEventListener("keydown",e=>{
 
-    const speed = 10;
+if(!me) return;
 
-    if (e.key === "w") socket.emit("move", { dx: 0, dy: -speed });
-    if (e.key === "s") socket.emit("move", { dx: 0, dy: speed });
-    if (e.key === "a") socket.emit("move", { dx: -speed, dy: 0 });
-    if (e.key === "d") socket.emit("move", { dx: speed, dy: 0 });
+const speed=10;
+
+if(e.key==="w") socket.emit("move",{dx:0,dy:-speed});
+if(e.key==="s") socket.emit("move",{dx:0,dy:speed});
+if(e.key==="a") socket.emit("move",{dx:-speed,dy:0});
+if(e.key==="d") socket.emit("move",{dx:speed,dy:0});
+
 });
 
-canvas.addEventListener("click", e => {
-    if (!me) return;
+canvas.addEventListener("click",e=>{
 
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+if(!me) return;
 
-    socket.emit("shoot", {
-        x: me.x + (mouseX - canvas.width/2),
-        y: me.y + (mouseY - canvas.height/2)
-    });
+socket.emit("shoot",{
+
+x:me.x+(e.clientX-canvas.width/2),
+y:me.y+(e.clientY-canvas.height/2)
+
 });
 
-socket.on("gameState", serverPlayers => {
-    players = serverPlayers;
-    me = players[socket.id];
 });
 
-socket.on("shotFired", data => {
-    if (!me) return;
+socket.on("gameState",state=>{
 
-    ctx.strokeStyle = "yellow";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(
-        data.x1 - me.x + canvas.width/2,
-        data.y1 - me.y + canvas.height/2
-    );
-    ctx.lineTo(
-        data.x2 - me.x + canvas.width/2,
-        data.y2 - me.y + canvas.height/2
-    );
-    ctx.stroke();
+players=state.players;
+bullets=state.bullets;
+me=players[socket.id];
+
 });
 
-function gameLoop() {
-    requestAnimationFrame(gameLoop);
+function drawGrid(){
 
-    if (!me) return;
+const size=100;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.strokeStyle="#1a1a1a";
 
-    for (let id in players) {
-        const p = players[id];
+for(let x=0;x<3000;x+=size){
 
-        const screenX = p.x - me.x + canvas.width/2;
-        const screenY = p.y - me.y + canvas.height/2;
+ctx.beginPath();
 
-        ctx.fillStyle = id === socket.id ? "lime" : "red";
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, 20, 0, Math.PI*2);
-        ctx.fill();
+ctx.moveTo(x-me.x+canvas.width/2,-me.y+canvas.height/2);
 
-        ctx.fillStyle = "white";
-        ctx.fillText(p.username, screenX - 20, screenY - 30);
-    }
+ctx.lineTo(x-me.x+canvas.width/2,3000-me.y+canvas.height/2);
+
+ctx.stroke();
+
+}
+
+for(let y=0;y<3000;y+=size){
+
+ctx.beginPath();
+
+ctx.moveTo(-me.x+canvas.width/2,y-me.y+canvas.height/2);
+
+ctx.lineTo(3000-me.x+canvas.width/2,y-me.y+canvas.height/2);
+
+ctx.stroke();
+
+}
+
+}
+
+function gameLoop(){
+
+requestAnimationFrame(gameLoop);
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+if(!me) return;
+
+drawGrid();
+
+for(let id in players){
+
+const p=players[id];
+
+const x=p.x-me.x+canvas.width/2;
+const y=p.y-me.y+canvas.height/2;
+
+ctx.fillStyle=id===socket.id?"gold":"white";
+
+ctx.beginPath();
+ctx.arc(x,y,20,0,Math.PI*2);
+ctx.fill();
+
+}
+
+bullets.forEach(b=>{
+
+ctx.fillStyle="red";
+
+ctx.fillRect(
+b.x-me.x+canvas.width/2,
+b.y-me.y+canvas.height/2,
+6,
+6
+);
+
+});
+
 }
 
 gameLoop();
-
-
