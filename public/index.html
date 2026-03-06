@@ -9,7 +9,7 @@
 body{
 margin:0;
 overflow:hidden;
-background:#0b0b0b;
+background:#0f0f0f;
 font-family:Arial;
 color:white;
 }
@@ -20,6 +20,42 @@ top:40%;
 left:50%;
 transform:translate(-50%,-50%);
 text-align:center;
+}
+
+#coins{
+position:absolute;
+top:20px;
+left:20px;
+}
+
+#shopBtn{
+position:absolute;
+top:20px;
+right:20px;
+}
+
+#shop{
+position:absolute;
+top:70px;
+right:20px;
+background:#222;
+padding:15px;
+display:none;
+}
+
+#skins{
+position:absolute;
+top:70px;
+left:20px;
+background:#222;
+padding:15px;
+}
+
+#minimap{
+position:absolute;
+bottom:20px;
+right:20px;
+border:2px solid white;
 }
 
 canvas{
@@ -36,7 +72,7 @@ display:none;
 
 <h1>RISE OF IKONS</h1>
 
-<input id="username" placeholder="Username">
+<input id="name" placeholder="username">
 
 <br><br>
 
@@ -44,11 +80,37 @@ display:none;
 
 </div>
 
+<div id="coins"></div>
+
+<button id="shopBtn" onclick="toggleShop()">Shop</button>
+
+<div id="shop">
+
+<h3>Crates</h3>
+
+<button onclick="openCrate('epic')">Epic</button><br><br>
+<button onclick="openCrate('rare')">Rare</button><br><br>
+<button onclick="openCrate('legendary')">Legendary</button>
+
+</div>
+
+<div id="skins">
+
+<h3>Skins</h3>
+
+<button onclick="setSkin('gold')">Gold</button>
+<button onclick="setSkin('red')">Red</button>
+<button onclick="setSkin('blue')">Blue</button>
+<button onclick="setSkin('green')">Green</button>
+<button onclick="setSkin('purple')">Purple</button>
+
+</div>
+
 <canvas id="game"></canvas>
+<canvas id="minimap" width="200" height="200"></canvas>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 
 </body>
 </html>
-
