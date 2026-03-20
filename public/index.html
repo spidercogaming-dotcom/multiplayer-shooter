@@ -1,19 +1,10 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<title>Rise of Ikons</title>
+<title>Rise of Ikons PRO</title>
 
 <style>
-
-body{
-margin:0;
-overflow:hidden;
-background:#0a0a0a;
-font-family:Arial;
-color:white;
-}
+body{margin:0;overflow:hidden;background:#111;color:white;font-family:Arial;}
 
 #menu{
 position:absolute;
@@ -23,86 +14,51 @@ transform:translate(-50%,-50%);
 text-align:center;
 }
 
-#coins{
+#hud{
 position:absolute;
-top:20px;
-left:20px;
-}
-
-#shopBtn{
-position:absolute;
-top:20px;
-right:20px;
-}
-
-#shop{
-position:absolute;
-top:70px;
-right:20px;
-background:#222;
-padding:15px;
-border-radius:10px;
-display:none;
-}
-
-canvas{
-display:none;
+top:10px;
+left:10px;
 }
 
 #minimap{
 position:absolute;
-bottom:20px;
-right:20px;
+top:10px;
+left:10px;
 border:2px solid white;
 }
 
-</style>
+#mode{
+position:absolute;
+top:10px;
+right:10px;
+}
 
+canvas{display:none;}
+</style>
 </head>
 
 <body>
 
 <div id="menu">
-
-<h1>RISE OF IKONS</h1>
-
-<input id="username" placeholder="Username">
-
-<br><br>
-
-<button onclick="startGame()">Play</button>
-
+<h1>RISE OF IKONS PRO</h1>
+<input id="name" placeholder="username"><br><br>
+<button onclick="start()">Play</button>
 </div>
 
-<div id="coins">Coins: 0</div>
+<div id="hud"></div>
 
-<button id="shopBtn" onclick="toggleShop()">Shop</button>
+<canvas id="minimap" width="200" height="200"></canvas>
 
-<div id="shop">
-
-<h3>Epic Crate (50)</h3>
-<button onclick="crate('epic')">Open</button>
-
-<h3>Rare Crate (100)</h3>
-<button onclick="crate('rare')">Open</button>
-
-<h3>Legendary Crate (200)</h3>
-<button onclick="crate('legendary')">Open</button>
-
-<h3>Skins</h3>
-
-<button onclick="skin('cyan')">Cyan</button>
-<button onclick="skin('lime')">Lime</button>
-<button onclick="skin('red')">Red</button>
-
+<div id="mode">
+<button onclick="mode('ffa')">FFA</button>
+<button onclick="mode('team')">Team</button>
+<button onclick="mode('swords')">Swords</button>
 </div>
 
 <canvas id="game"></canvas>
-<canvas id="minimap" width="200" height="200"></canvas>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 
 </body>
-
 </html>
