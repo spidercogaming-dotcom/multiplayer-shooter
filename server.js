@@ -1,62 +1,65 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server);
 
-const io = new Server(server,{
-cors:{origin:"*"}
-});
+app.use(express.static("public"));
 
-app.use(express.static(path.join(__dirname,"public")));
-
-const PORT = process.env.PORT || 3000;
-const MAP_SIZE = 3000;
+const MAP_SIZE = 4000;
 
 let players = {};
-let bullets = [];
 
 const weapons = {
-
-pistol:{damage:10,rate:400},
-rifle:{damage:15,rate:250},
-
-bazooka:{damage:40,rate:900},
-rpg:{damage:35,rate:850},
-smg:{damage:8,rate:120},
-
-sniper:{damage:60,rate:1000},
-laser:{damage:25,rate:150},
-minigun:{damage:7,rate:70}
-
+pistol:{damage:10,range:500},
+rifle:{damage:18,range:700},
+sniper:{damage:60,range:1200},
+sword:{damage:30,range:60},
+knife:{damage:20,range:40},
+pickaxe:{damage:25,range:50}
 };
+
+let gameMode = "ffa"; // ffa, team, swords
 
 io.on("connection",socket=>{
 
-socket.on("joinGame",name=>{
+socket.on("joinGame",data=>{
 
 players[socket.id]={
-
 id:socket.id,
-name,
-x:Math.random()*MAP_SIZE,
-y:Math.random()*MAP_SIZE,
+name:data.name,
+x:2000,
+y:-500, // start in sky (battle bus)
 hp:100,
-coins:0,
+coins:100,
+gems:10,
 weapon:"pistol",
-skin:"gold",
-lastShot:0
-
+inventory:["pistol"],
+skin:"cyan",
+inBus:true,
+team:Math.random()<0.5?"red":"blue"
 };
+
+});
+
+socket.on("drop",()=>{
+
+let p=players[socket.id];
+if(!p) return;
+
+p.inBus=false;
+p.y=0;
 
 });
 
 socket.on("move",data=>{
 
-const p=players[socket.id];
+let p=players[socket.id];
 if(!p) return;
+
+if(p.inBus) return;
 
 p.x+=data.dx;
 p.y+=data.dy;
@@ -66,97 +69,57 @@ p.y=Math.max(0,Math.min(MAP_SIZE,p.y));
 
 });
 
-socket.on("shoot",target=>{
+socket.on("attack",target=>{
 
-const p=players[socket.id];
+let p=players[socket.id];
 if(!p) return;
 
-const weapon=weapons[p.weapon];
-const now=Date.now();
+let w=weapons[p.weapon];
 
-if(now-p.lastShot < weapon.rate) return;
+for(let id in players){
 
-p.lastShot = now;
+if(id===socket.id) continue;
 
-const dx = target.x - p.x;
-const dy = target.y - p.y;
-const dist = Math.hypot(dx,dy);
+let e=players[id];
 
-bullets.push({
+if(gameMode==="team" && e.team===p.team) continue;
 
-x:p.x,
-y:p.y,
-vx:(dx/dist)*20,
-vy:(dy/dist)*20,
-damage:weapon.damage,
-owner:socket.id
+let d=Math.hypot(e.x-target.x,e.y-target.y);
 
-});
+if(d<w.range){
 
-});
+e.hp-=w.damage;
 
-socket.on("setSkin",color=>{
+if(e.hp<=0){
 
-if(players[socket.id]){
-players[socket.id].skin=color;
+e.hp=100;
+e.x=Math.random()*MAP_SIZE;
+e.y=Math.random()*MAP_SIZE;
+
+p.coins+=30;
+p.gems+=2;
+
+}
+
+}
+
 }
 
 });
 
-socket.on("openCrate",type=>{
+socket.on("switchWeapon",w=>{
 
-const p = players[socket.id];
+let p=players[socket.id];
 if(!p) return;
 
-let cost = 0;
-let reward;
-
-if(type==="epic"){
-
-cost=50;
-
-if(p.coins < cost){
-socket.emit("notEnoughCoins");
-return;
+if(p.inventory.includes(w)){
+p.weapon=w;
 }
 
-reward = Math.random()<0.5 ? "pistol" : "rifle";
+});
 
-}
-
-if(type==="rare"){
-
-cost=100;
-
-if(p.coins < cost){
-socket.emit("notEnoughCoins");
-return;
-}
-
-let r=Math.random();
-reward = r<0.33?"bazooka":r<0.66?"rpg":"smg";
-
-}
-
-if(type==="legendary"){
-
-cost=200;
-
-if(p.coins < cost){
-socket.emit("notEnoughCoins");
-return;
-}
-
-let r=Math.random();
-reward = r<0.33?"sniper":r<0.66?"laser":"minigun";
-
-}
-
-p.coins -= cost;
-p.weapon = reward;
-
-socket.emit("crateReward",reward);
-
+socket.on("setMode",mode=>{
+gameMode=mode;
 });
 
 socket.on("disconnect",()=>{
@@ -167,52 +130,8 @@ delete players[socket.id];
 
 setInterval(()=>{
 
-bullets.forEach(b=>{
-
-b.x+=b.vx;
-b.y+=b.vy;
-
-for(let id in players){
-
-if(id===b.owner) continue;
-
-const p = players[id];
-const d = Math.hypot(p.x-b.x,p.y-b.y);
-
-if(d<20){
-
-p.hp -= b.damage;
-
-if(p.hp<=0){
-
-p.hp=100;
-p.x=Math.random()*MAP_SIZE;
-p.y=Math.random()*MAP_SIZE;
-
-if(players[b.owner]){
-players[b.owner].coins += 20;
-}
-
-}
-
-b.dead=true;
-
-}
-
-}
-
-});
-
-bullets = bullets.filter(b=>!b.dead);
-
-io.emit("gameState",{players,bullets});
+io.emit("state",players);
 
 },1000/60);
 
-server.listen(PORT,()=>{
-
-console.log("Server running");
-
-});
-
-
+server.listen(process.env.PORT||3000);
