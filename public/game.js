@@ -48,6 +48,7 @@ let mapSize    = 4000;
 let kills      = 0;
 let score      = 0;
 let gameActive = false;
+let _lastInvKey = "";
 let selectedMode = "ffa";
 
 // Prediction
@@ -316,25 +317,15 @@ canvas.addEventListener("mousemove", e => {
   my = e.clientY;
 });
 
-canvas.addEventListener("mousedown", e => {
-  if (!gameActive || !myId) return;
-  if (e.button !== 0) return;
-  doShoot();
-});
-
-// Auto-fire for auto weapons
-let shootInterval = null;
+// Single unified mouse handler — no duplicate listeners, no setInterval stutter
+let mouseHeld = false;
 canvas.addEventListener("mousedown", e => {
   if (!gameActive || !myId || e.button !== 0) return;
-  const w = weapons[currentWeapon];
-  if (w?.auto ?? false) {
-    if (shootInterval) clearInterval(shootInterval);
-    shootInterval = setInterval(doShoot, w.fireRate);
-  }
+  mouseHeld = true;
+  doShoot(); // immediate shot on press
 });
-canvas.addEventListener("mouseup", () => {
-  if (shootInterval) { clearInterval(shootInterval); shootInterval = null; }
-});
+canvas.addEventListener("mouseup",   () => { mouseHeld = false; });
+canvas.addEventListener("mouseleave",() => { mouseHeld = false; });
 
 function doShoot() {
   if (!myId || !players[myId]) return;
@@ -413,6 +404,12 @@ function sendInput() {
   myVel.y *= FRICTION;
   myPos.x += myVel.x;
   myPos.y += myVel.y;
+
+  // Auto-fire: mouse held + weapon declared auto
+  if (mouseHeld) {
+    const w = weapons[currentWeapon];
+    if (w && w.auto) doShoot();
+  }
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
@@ -468,12 +465,8 @@ function drawBackground() {
 
 function drawZone() {
   const c = worldToScreen(zone.cx, zone.cy);
-  const r = (zone.radius / mapSize) * Math.min(canvas.width, canvas.height) * (mapSize / 4000);
-  // Actually scale radius in screen pixels
-  const scale = canvas.width / (2 * 800); // rough
-  const sr = zone.radius * (canvas.width / mapSize) * (mapSize / (mapSize)); // px per world unit
-  // Correct screen radius
-  const screenR = zone.radius;
+  // 1 world-unit = canvas.width / mapSize pixels (camera is centered, no zoom)
+  const screenR = zone.radius * (canvas.width / mapSize);
 
   // Safe zone fill
   ctx.save();
@@ -569,15 +562,23 @@ const WEAPON_COLORS = {
 };
 
 function drawBullets() {
+  // Batch by weapon colour — no shadowBlur (it tanks FPS on heavy fire)
+  const groups = {};
   for (const b of bullets) {
-    const s = worldToScreen(b.x, b.y);
     const col = WEAPON_COLORS[b.weapon] || "#fff";
-    ctx.shadowColor = col; ctx.shadowBlur = 6;
+    if (!groups[col]) groups[col] = [];
+    groups[col].push(b);
+  }
+  for (const [col, batch] of Object.entries(groups)) {
     ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, b.weapon === "sniper" ? 4 : b.weapon === "rpg" ? 6 : 3, 0, Math.PI*2);
+    for (const b of batch) {
+      const s = worldToScreen(b.x, b.y);
+      const r = b.weapon === "sniper" ? 4 : b.weapon === "rpg" ? 6 : 3;
+      ctx.moveTo(s.x + r, s.y);
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    }
     ctx.fill();
-    ctx.shadowBlur = 0;
   }
 }
 
@@ -656,37 +657,51 @@ function drawPlayers() {
       ctx.stroke();
     }
 
-    // Name tag
-    if (id !== myId || true) {
-      ctx.fillStyle   = "rgba(0,0,0,0.5)";
-      ctx.font        = "bold 10px monospace";
-      ctx.textAlign   = "center";
-      const label = p.name + (gameMode==="team" ? ` [${(p.team||"").toUpperCase()}]` : "");
-      const tw = ctx.measureText(label).width;
-      ctx.fillRect(s.x - tw/2 - 3, s.y - R - 22, tw + 6, 13);
-      ctx.fillStyle = id === myId ? "#fff" : "#cbd5e1";
-      ctx.fillText(label, s.x, s.y - R - 12);
-    }
+    // Name tag — measure once, cache on player object
+    ctx.font      = "bold 10px monospace";
+    ctx.textAlign = "center";
+    const label = p.name + (gameMode==="team" ? ` [${(p.team||"").toUpperCase()}]` : "");
+    if (!p._labelW || p._label !== label) { p._label = label; p._labelW = ctx.measureText(label).width; }
+    const tw = p._labelW;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(s.x - tw/2 - 3, s.y - R - 22, tw + 6, 13);
+    ctx.fillStyle = id === myId ? "#fff" : "#cbd5e1";
+    ctx.fillText(label, s.x, s.y - R - 12);
   }
 }
 
 function drawParticles(dt) {
+  // Update positions first
   for (const p of particles) {
     p.x    += p.vx * dt;
     p.y    += p.vy * dt;
     p.vx   *= 0.92;
     p.vy   *= 0.92;
     p.life -= p.decay * dt;
+  }
+  particles = particles.filter(p => p.life > 0);
 
-    const s = worldToScreen(p.x, p.y);
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle   = p.color;
+  // Batch draw — one path per opacity bucket to avoid ctx.globalAlpha thrash
+  const buckets = {};
+  for (const p of particles) {
+    const alpha = Math.max(0, p.life).toFixed(1);
+    const key   = p.color + "|" + alpha;
+    if (!buckets[key]) buckets[key] = { color: p.color, alpha: +alpha, pts: [] };
+    buckets[key].pts.push(p);
+  }
+  for (const b of Object.values(buckets)) {
+    ctx.globalAlpha = b.alpha;
+    ctx.fillStyle   = b.color;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, p.size * p.life, 0, Math.PI*2);
+    for (const p of b.pts) {
+      const s = worldToScreen(p.x, p.y);
+      const r = Math.max(0.1, p.size * p.life);
+      ctx.moveTo(s.x + r, s.y);
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    }
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-  particles = particles.filter(p => p.life > 0);
 }
 
 function drawCrosshair() {
@@ -831,11 +846,10 @@ function loop(now) {
   // Hit flash decay
   if (hitFlash > 0) hitFlash -= dt * 3;
 
-  // Rebuild weapon slots if inventory changed
+  // Rebuild weapon slots only when inventory actually changes (not every frame)
   if (me && me.inventory) {
-    const existing = [...weaponSlots.querySelectorAll(".wslot")].map(el => el.id.replace("wslot-",""));
-    const inv      = me.inventory;
-    if (JSON.stringify(existing) !== JSON.stringify(inv)) buildWeaponSlots();
+    const newKey = me.inventory.join(",");
+    if (newKey !== _lastInvKey) { _lastInvKey = newKey; buildWeaponSlots(); }
   }
 }
 
