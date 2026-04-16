@@ -5,175 +5,116 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Rise of Ikons PRO</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  :root{
-    --bg:#0f172a;--surface:rgba(15,23,42,.85);--border:rgba(255,255,255,.12);
-    --accent:#3b82f6;--danger:#ef4444;--gold:#facc15;--green:#22c55e;
-    --text:#f1f5f9;--muted:#94a3b8;--mono:'Courier New',monospace;
-  }
-  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono)}
-  canvas{display:block;cursor:crosshair;position:absolute;inset:0}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f172a;--surface:rgba(15,23,42,.88);--border:rgba(255,255,255,.1);
+  --accent:#3b82f6;--danger:#ef4444;--gold:#facc15;--green:#22c55e;
+  --text:#f1f5f9;--muted:#94a3b8;--mono:'Courier New',monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono)}
+canvas{display:block;cursor:crosshair;position:absolute;inset:0}
 
-  /* ── MENU ── */
-  #menu{
-    position:absolute;inset:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:18px;
-    background:radial-gradient(ellipse at center,#1e293b 0%,#0f172a 70%);
-    z-index:100;
-  }
-  #menu-logo{
-    font-size:clamp(28px,6vw,56px);font-weight:900;letter-spacing:6px;
-    text-transform:uppercase;color:var(--text);
-    text-shadow:0 0 40px rgba(59,130,246,.6);
-  }
-  #menu-sub{font-size:12px;color:var(--muted);letter-spacing:3px;text-transform:uppercase}
-  #menu-form{display:flex;flex-direction:column;align-items:center;gap:12px;width:260px}
-  #name-input{
-    width:100%;padding:10px 16px;background:rgba(255,255,255,.05);
-    border:1px solid var(--border);border-radius:6px;color:var(--text);
-    font-family:var(--mono);font-size:14px;text-align:center;outline:none;
-    transition:border-color .2s;
-  }
-  #name-input:focus{border-color:var(--accent)}
-  #name-input::placeholder{color:var(--muted)}
-  .menu-btn{
-    width:100%;padding:11px;background:var(--accent);border:none;
-    border-radius:6px;color:#fff;font-family:var(--mono);font-size:14px;
-    font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;
-    transition:background .15s,transform .1s;
-  }
-  .menu-btn:hover{background:#2563eb}
-  .menu-btn:active{transform:scale(.97)}
-  .menu-btn.outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
-  .menu-btn.outline:hover{background:rgba(255,255,255,.05);color:var(--text)}
-  #mode-select{display:flex;gap:8px}
-  .mode-btn{
-    padding:7px 14px;background:transparent;border:1px solid var(--border);
-    border-radius:5px;color:var(--muted);font-family:var(--mono);font-size:11px;
-    cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:all .15s;
-  }
-  .mode-btn.active,.mode-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
-  #menu-controls{
-    display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;
-    font-size:11px;color:var(--muted);text-align:left;margin-top:4px;
-  }
-  #menu-controls span{color:var(--text);font-weight:700}
+/* ── MENU ── */
+#menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at center,#1e293b 0%,#0f172a 70%);z-index:100}
+#menu-logo{font-size:clamp(28px,6vw,56px);font-weight:900;letter-spacing:6px;text-transform:uppercase;color:var(--text);text-shadow:0 0 40px rgba(59,130,246,.6)}
+#menu-sub{font-size:12px;color:var(--muted);letter-spacing:3px;text-transform:uppercase}
+#menu-form{display:flex;flex-direction:column;align-items:center;gap:12px;width:260px}
+#name-input{width:100%;padding:10px 16px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:14px;text-align:center;outline:none;transition:border-color .2s}
+#name-input:focus{border-color:var(--accent)}
+#name-input::placeholder{color:var(--muted)}
+.menu-btn{width:100%;padding:11px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:background .15s}
+.menu-btn:hover{background:#2563eb}
+#mode-select{display:flex;gap:8px}
+.mode-btn{padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:all .15s}
+.mode-btn.active,.mode-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+#menu-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:11px;color:var(--muted);text-align:left;margin-top:4px}
+#menu-controls span{color:var(--text);font-weight:700}
 
-  /* ── HUD ── */
-  #hud{position:absolute;inset:0;pointer-events:none;z-index:50;display:none}
+/* ── HUD ── */
+#hud{position:absolute;inset:0;pointer-events:none;z-index:50;display:none}
 
-  /* bars top-left */
-  #bars{position:absolute;top:16px;left:16px;display:flex;flex-direction:column;gap:5px;width:190px}
-  .bar-row{display:flex;align-items:center;gap:8px}
-  .bar-icon{font-size:12px;width:14px;text-align:center;color:var(--muted)}
-  .bar-outer{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
-  .bar-fill{height:100%;border-radius:4px;transition:width .12s}
-  #hp-fill{background:var(--green)}
-  #sh-fill{background:var(--accent)}
-  .bar-val{font-size:10px;color:var(--muted);min-width:26px;text-align:right}
+#bars{position:absolute;top:16px;left:16px;display:flex;flex-direction:column;gap:5px;width:190px}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-icon{font-size:12px;width:14px;text-align:center;color:var(--muted)}
+.bar-outer{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .12s}
+#hp-fill{background:#22c55e}
+#sh-fill{background:var(--accent)}
+.bar-val{font-size:10px;color:var(--muted);min-width:26px;text-align:right}
 
-  /* ammo bottom-center */
-  #ammo-hud{
-    position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
-    display:flex;align-items:center;gap:12px;
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:8px;padding:8px 20px;
-  }
-  #weapon-name{font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text);text-transform:uppercase;min-width:70px}
-  #ammo-count{font-size:22px;font-weight:900;color:var(--text);min-width:50px;text-align:right}
-  #ammo-sep{color:var(--muted);font-size:14px}
-  #ammo-reserve{font-size:14px;color:var(--muted)}
-  #reload-bar-wrap{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
-    width:160px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;display:none}
-  #reload-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width .05s linear}
+/* passive hud */
+#passive-hud{position:absolute;top:60px;left:16px;display:none;flex-direction:column;gap:2px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.08);border-radius:5px;padding:5px 10px;font-size:11px;letter-spacing:1px;pointer-events:none}
 
-  /* weapon slots */
-  #weapon-slots{
-    position:absolute;bottom:20px;left:16px;
-    display:flex;flex-direction:column;gap:5px;
-  }
-  .wslot{
-    background:var(--surface);border:1px solid var(--border);border-radius:5px;
-    padding:5px 10px;font-size:10px;color:var(--muted);min-width:90px;
-    display:flex;align-items:center;gap:6px;transition:all .1s;
-  }
-  .wslot.active{border-color:var(--accent);color:var(--text);background:rgba(59,130,246,.15)}
-  .wslot-key{color:var(--accent);font-weight:700;font-size:9px}
+#ammo-hud{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px}
+#weapon-name{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;min-width:90px}
+#ammo-count{font-size:22px;font-weight:900;color:var(--text);min-width:50px;text-align:right}
+#ammo-sep{color:var(--muted);font-size:14px}
+#ammo-reserve{font-size:14px;color:var(--muted)}
+#reload-bar-wrap{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:160px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;display:none}
+#reload-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width .05s linear}
 
-  /* stats top-right */
-  #stats{
-    position:absolute;top:16px;right:160px;
-    display:flex;gap:8px;
-  }
-  .stat-pill{
-    background:var(--surface);border:1px solid var(--border);border-radius:20px;
-    padding:4px 12px;font-size:11px;display:flex;gap:5px;align-items:center;
-  }
-  .stat-pill b{color:var(--text)}
-  .stat-pill span{color:var(--muted)}
+#weapon-slots{position:absolute;bottom:20px;left:16px;display:flex;flex-direction:column;gap:5px}
+.wslot{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 10px;font-size:10px;color:var(--muted);min-width:110px;display:flex;align-items:center;gap:5px;cursor:pointer;transition:all .1s;pointer-events:all}
+.wslot.active{color:var(--text);background:rgba(59,130,246,.12)}
+.wslot-key{color:var(--accent);font-weight:700;font-size:9px;min-width:10px}
+.wslot-rarity{margin-left:auto}
 
-  /* minimap */
-  #minimap-wrap{position:absolute;top:16px;right:16px}
-  #minimap{border-radius:6px;border:1px solid var(--border);display:block}
-  #minimap-label{text-align:center;font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+#stats{position:absolute;top:16px;right:160px;display:flex;gap:8px}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;display:flex;gap:5px;align-items:center}
+.stat-pill b{color:var(--text)}
+.stat-pill span{color:var(--muted)}
 
-  /* kill feed */
-  #killfeed{
-    position:absolute;top:16px;left:50%;transform:translateX(-50%);
-    display:flex;flex-direction:column;align-items:center;gap:4px;
-    min-width:260px;pointer-events:none;
-  }
-  .kf-entry{
-    background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.08);
-    border-radius:4px;padding:4px 10px;font-size:11px;
-    animation:kf-in .2s ease,kf-out .4s ease 2.1s forwards;
-    white-space:nowrap;
-  }
-  @keyframes kf-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes kf-out{to{opacity:0}}
-  .kf-kill{color:var(--gold)}
-  .kf-victim{color:var(--danger)}
-  .kf-weapon{color:var(--muted);font-size:9px}
+#minimap-wrap{position:absolute;top:16px;right:16px}
+#minimap{border-radius:6px;border:1px solid var(--border);display:block}
+#minimap-label{text-align:center;font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px}
 
-  /* zone warning */
-  #zone-warn{
-    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);
-    border-radius:8px;padding:10px 24px;font-size:14px;color:var(--danger);
-    font-weight:700;letter-spacing:2px;display:none;animation:pulse 1s infinite;
-  }
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#killfeed{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;min-width:280px;pointer-events:none}
+.kf-entry{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:4px 10px;font-size:11px;animation:kf-in .2s ease,kf-out .4s ease 2.1s forwards;white-space:nowrap}
+@keyframes kf-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kf-out{to{opacity:0}}
+.kf-kill{color:var(--gold)}
+.kf-victim{color:var(--danger)}
+.kf-weapon{color:var(--muted);font-size:9px}
 
-  /* notifications */
-  #notify{
-    position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
-    font-size:13px;color:var(--gold);font-weight:700;letter-spacing:1px;
-    pointer-events:none;opacity:0;transition:opacity .2s;text-align:center;
-  }
+#zone-warn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:10px 24px;font-size:14px;color:var(--danger);font-weight:700;letter-spacing:2px;display:none;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
-  /* death screen */
-  #death-screen{
-    position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;
-    flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:80;
-  }
-  #death-screen h2{font-size:36px;color:var(--danger);letter-spacing:4px}
-  #death-screen p{font-size:13px;color:var(--muted)}
-  #respawn-bar-wrap{width:240px;height:6px;background:rgba(255,255,255,.1);border-radius:3px}
-  #respawn-bar{height:100%;background:var(--accent);border-radius:3px;width:0;transition:width .05s linear}
+#notify{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .2s;text-align:center;text-shadow:0 0 10px rgba(0,0,0,.8)}
 
-  /* leaderboard overlay (Tab) */
-  #leaderboard{
-    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    background:var(--surface);border:1px solid var(--border);border-radius:10px;
-    padding:20px 28px;min-width:280px;display:none;z-index:90;backdrop-filter:blur(8px);
-  }
-  #leaderboard h3{font-size:13px;letter-spacing:3px;color:var(--muted);margin-bottom:12px;text-transform:uppercase}
-  .lb-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-  .lb-row:last-child{border:none}
-  .lb-rank{color:var(--muted);min-width:20px}
-  .lb-name{flex:1;padding-left:8px}
-  .lb-kills{color:var(--gold);min-width:40px;text-align:right}
-  .lb-score{color:var(--accent);min-width:50px;text-align:right}
+#death-screen{position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:80}
+#death-screen h2{font-size:36px;color:var(--danger);letter-spacing:4px}
+#death-screen p{font-size:13px;color:var(--muted)}
+#respawn-bar-wrap{width:240px;height:6px;background:rgba(255,255,255,.1);border-radius:3px}
+#respawn-bar{height:100%;background:var(--accent);border-radius:3px;width:0}
+
+#leaderboard{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 28px;min-width:280px;display:none;z-index:90;backdrop-filter:blur(8px)}
+#leaderboard h3{font-size:13px;letter-spacing:3px;color:var(--muted);margin-bottom:12px;text-transform:uppercase}
+.lb-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.lb-rank{color:var(--muted);min-width:20px}
+.lb-name{flex:1;padding-left:8px}
+.lb-kills{color:var(--gold);min-width:40px;text-align:right}
+.lb-score{color:var(--accent);min-width:50px;text-align:right}
+
+/* ── SHOP ── */
+#shop{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;min-width:640px;max-width:90vw;display:none;flex-direction:column;gap:14px;z-index:95;backdrop-filter:blur(12px);pointer-events:all}
+#shop-header{display:flex;align-items:center;justify-content:space-between}
+#shop-header h2{font-size:16px;letter-spacing:4px;color:var(--text);text-transform:uppercase}
+#shop-header span{font-size:12px;color:var(--muted)}
+#shop-close{background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:4px 10px;font-family:var(--mono);cursor:pointer;pointer-events:all}
+#shop-close:hover{color:var(--text)}
+#shop-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.shop-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
+.shop-item:hover{background:rgba(255,255,255,.07)}
+.shop-item-name{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;line-height:1.3}
+.shop-item-passive{font-size:9px;color:var(--muted);line-height:1.4}
+.shop-item-cost{font-size:13px;font-weight:700;margin-top:auto}
+.shop-buy-btn{background:transparent;border:1px solid;border-radius:4px;font-family:var(--mono);font-size:10px;padding:5px;cursor:pointer;letter-spacing:1px;pointer-events:all;transition:background .1s}
+.shop-buy-btn:hover{background:rgba(255,255,255,.1)}
+#shop-hint{font-size:10px;color:var(--muted);text-align:center}
+
+/* shop toggle button */
+#shop-toggle{position:absolute;bottom:20px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-family:var(--mono);font-size:11px;color:var(--gold);cursor:pointer;pointer-events:all;letter-spacing:1px;transition:background .1s}
+#shop-toggle:hover{background:rgba(250,204,21,.1)}
 </style>
 </head>
 <body>
@@ -193,17 +134,17 @@
   </div>
   <div id="menu-controls">
     <div><span>WASD</span> Move</div>
-    <div><span>Mouse</span> Aim</div>
-    <div><span>Click</span> Shoot</div>
+    <div><span>Mouse</span> Aim &amp; Shoot</div>
+    <div><span>RMB</span> Scope (sniper)</div>
     <div><span>R</span> Reload</div>
     <div><span>1-7</span> Weapons</div>
     <div><span>Tab</span> Scores</div>
-    <div><span>E</span> Pickup</div>
-    <div><span>Esc</span> Menu</div>
+    <div><span>F</span> Open Crate</div>
+    <div><span>B</span> Shop</div>
   </div>
 </div>
 
-<!-- ── GAME CANVAS ── -->
+<!-- ── CANVAS ── -->
 <canvas id="game"></canvas>
 
 <!-- ── HUD ── -->
@@ -221,10 +162,12 @@
     </div>
   </div>
 
+  <div id="passive-hud"></div>
+
   <div id="stats">
     <div class="stat-pill"><span>Kills</span><b id="stat-kills">0</b></div>
     <div class="stat-pill"><span>Score</span><b id="stat-score">0</b></div>
-    <div class="stat-pill"><span>Coins</span><b id="stat-coins">50</b></div>
+    <div class="stat-pill"><span>⬡</span><b id="stat-coins">120</b></div>
   </div>
 
   <div id="minimap-wrap">
@@ -234,26 +177,26 @@
 
   <div id="killfeed"></div>
   <div id="zone-warn">⚠ GET IN THE ZONE</div>
-
   <div id="weapon-slots"></div>
 
   <div id="ammo-hud">
-    <div id="weapon-name">PISTOL</div>
+    <div id="weapon-name" style="color:#facc15">PISTOL</div>
     <div id="ammo-count">12</div>
     <div id="ammo-sep">/</div>
     <div id="ammo-reserve">90</div>
   </div>
   <div id="reload-bar-wrap"><div id="reload-bar-fill"></div></div>
-
   <div id="notify"></div>
+
+  <button id="shop-toggle" onclick="toggleShop()">⬡ SHOP [B]</button>
 </div>
 
-<!-- ── DEATH SCREEN ── -->
+<!-- ── DEATH ── -->
 <div id="death-screen">
   <h2>YOU DIED</h2>
   <p id="death-by">Killed by —</p>
   <div id="respawn-bar-wrap"><div id="respawn-bar"></div></div>
-  <p id="respawn-label" style="font-size:11px;color:var(--muted)">Respawning…</p>
+  <p style="font-size:11px;color:var(--muted)">Respawning…</p>
 </div>
 
 <!-- ── LEADERBOARD ── -->
@@ -262,7 +205,26 @@
   <div id="lb-rows"></div>
 </div>
 
+<!-- ── SHOP ── -->
+<div id="shop">
+  <div id="shop-header">
+    <h2>⬡ Weapon Shop</h2>
+    <span style="color:var(--gold)">⬡ <b id="shop-coins">—</b> coins</span>
+    <button id="shop-close" onclick="toggleShop()">✕ CLOSE [B]</button>
+  </div>
+  <div id="shop-items"></div>
+  <div id="shop-hint">Rarity: <span style="color:#94a3b8">Common</span> → <span style="color:#4ade80">Uncommon</span> → <span style="color:#60a5fa">Rare</span> → <span style="color:#a78bfa">Epic</span> → <span style="color:#f97316">Legendary</span> → <span style="color:#f43f5e">Mythic</span> → <span style="color:#facc15">Special</span></div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
+<script>
+  // Keep shop coins display in sync
+  setInterval(()=>{
+    const me = typeof players!=="undefined"&&players&&typeof myId!=="undefined"?players[myId]:null;
+    const el=document.getElementById("shop-coins");
+    if (el&&me) el.textContent=me.coins;
+  },500);
+</script>
 </body>
 </html>
