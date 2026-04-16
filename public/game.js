@@ -9,31 +9,26 @@ const mctx=minimap.getContext("2d");
 canvas.width=window.innerWidth;
 canvas.height=window.innerHeight;
 
-let players={};
-let me;
+let players={},me,storm,busX;
 
 function start(){
 
 let name=document.getElementById("name").value;
 
-socket.emit("joinGame",{name});
+socket.emit("joinGame",name);
 
 document.getElementById("menu").style.display="none";
 canvas.style.display="block";
 
-setTimeout(()=>{
-socket.emit("drop"); // auto jump from battle bus
-},2000);
-
-}
-
-function mode(m){
-socket.emit("setMode",m);
 }
 
 document.addEventListener("keydown",e=>{
 
 if(!me) return;
+
+if(e.key===" "){
+socket.emit("drop");
+}
 
 let s=10;
 
@@ -42,16 +37,13 @@ if(e.key==="s") socket.emit("move",{dx:0,dy:s});
 if(e.key==="a") socket.emit("move",{dx:-s,dy:0});
 if(e.key==="d") socket.emit("move",{dx:s,dy:0});
 
-if(e.key==="1") socket.emit("switchWeapon","pistol");
-if(e.key==="2") socket.emit("switchWeapon","sword");
-
 });
 
 canvas.addEventListener("click",e=>{
 
 if(!me) return;
 
-socket.emit("attack",{
+socket.emit("shoot",{
 x:me.x+(e.clientX-canvas.width/2),
 y:me.y+(e.clientY-canvas.height/2)
 });
@@ -59,74 +51,69 @@ y:me.y+(e.clientY-canvas.height/2)
 });
 
 socket.on("state",data=>{
-players=data;
+players=data.players;
+storm=data.storm;
+busX=data.busX;
 me=players[socket.id];
 });
 
-function drawMap(){
+function draw(){
 
-ctx.fillStyle="#1e293b";
-ctx.fillRect(0,0,canvas.width,canvas.height);
-
-ctx.strokeStyle="#334155";
-
-for(let i=0;i<4000;i+=100){
-
-ctx.beginPath();
-ctx.moveTo(i-me.x+canvas.width/2,0);
-ctx.lineTo(i-me.x+canvas.width/2,canvas.height);
-ctx.stroke();
-
-ctx.beginPath();
-ctx.moveTo(0,i-me.y+canvas.height/2);
-ctx.lineTo(canvas.width,i-me.y+canvas.height/2);
-ctx.stroke();
-
-}
-
-}
-
-function loop(){
-
-requestAnimationFrame(loop);
+requestAnimationFrame(draw);
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
 if(!me) return;
 
-drawMap();
+// map
+ctx.fillStyle="#1e293b";
+ctx.fillRect(0,0,canvas.width,canvas.height);
 
+// storm circle
+ctx.strokeStyle="blue";
+ctx.beginPath();
+ctx.arc(
+storm.x-me.x+canvas.width/2,
+storm.y-me.y+canvas.height/2,
+storm.radius,
+0,Math.PI*2
+);
+ctx.stroke();
+
+// battle bus
+ctx.fillStyle="yellow";
+ctx.fillRect(busX-me.x+canvas.width/2,100,80,20);
+
+// players
 for(let id in players){
 
 let p=players[id];
 
-ctx.fillStyle=p.skin;
+ctx.fillStyle=p.alive?"white":"gray";
 
 ctx.beginPath();
 ctx.arc(
 p.x-me.x+canvas.width/2,
 p.y-me.y+canvas.height/2,
-20,0,Math.PI*2
+15,0,Math.PI*2
 );
 ctx.fill();
 
 }
 
+// minimap
 mctx.clearRect(0,0,200,200);
 
 for(let id in players){
-
 let p=players[id];
 
 mctx.fillStyle=id===socket.id?"gold":"white";
-
 mctx.fillRect((p.x/4000)*200,(p.y/4000)*200,4,4);
-
 }
 
 document.getElementById("hud").innerText=
-"HP:"+me.hp+" Coins:"+me.coins+" Gems:"+me.gems+" Weapon:"+me.weapon;
+"HP:"+me.hp+" | Press SPACE to drop";
 
 }
 
-loop();
+draw();
