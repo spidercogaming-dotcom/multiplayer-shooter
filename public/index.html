@@ -1,64 +1,268 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Rise of Ikons PRO</title>
-
 <style>
-body{margin:0;overflow:hidden;background:#111;color:white;font-family:Arial;}
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0f172a;--surface:rgba(15,23,42,.85);--border:rgba(255,255,255,.12);
+    --accent:#3b82f6;--danger:#ef4444;--gold:#facc15;--green:#22c55e;
+    --text:#f1f5f9;--muted:#94a3b8;--mono:'Courier New',monospace;
+  }
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono)}
+  canvas{display:block;cursor:crosshair;position:absolute;inset:0}
 
-#menu{
-position:absolute;
-top:40%;
-left:50%;
-transform:translate(-50%,-50%);
-text-align:center;
-}
+  /* ── MENU ── */
+  #menu{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(ellipse at center,#1e293b 0%,#0f172a 70%);
+    z-index:100;
+  }
+  #menu-logo{
+    font-size:clamp(28px,6vw,56px);font-weight:900;letter-spacing:6px;
+    text-transform:uppercase;color:var(--text);
+    text-shadow:0 0 40px rgba(59,130,246,.6);
+  }
+  #menu-sub{font-size:12px;color:var(--muted);letter-spacing:3px;text-transform:uppercase}
+  #menu-form{display:flex;flex-direction:column;align-items:center;gap:12px;width:260px}
+  #name-input{
+    width:100%;padding:10px 16px;background:rgba(255,255,255,.05);
+    border:1px solid var(--border);border-radius:6px;color:var(--text);
+    font-family:var(--mono);font-size:14px;text-align:center;outline:none;
+    transition:border-color .2s;
+  }
+  #name-input:focus{border-color:var(--accent)}
+  #name-input::placeholder{color:var(--muted)}
+  .menu-btn{
+    width:100%;padding:11px;background:var(--accent);border:none;
+    border-radius:6px;color:#fff;font-family:var(--mono);font-size:14px;
+    font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;
+    transition:background .15s,transform .1s;
+  }
+  .menu-btn:hover{background:#2563eb}
+  .menu-btn:active{transform:scale(.97)}
+  .menu-btn.outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  .menu-btn.outline:hover{background:rgba(255,255,255,.05);color:var(--text)}
+  #mode-select{display:flex;gap:8px}
+  .mode-btn{
+    padding:7px 14px;background:transparent;border:1px solid var(--border);
+    border-radius:5px;color:var(--muted);font-family:var(--mono);font-size:11px;
+    cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:all .15s;
+  }
+  .mode-btn.active,.mode-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+  #menu-controls{
+    display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;
+    font-size:11px;color:var(--muted);text-align:left;margin-top:4px;
+  }
+  #menu-controls span{color:var(--text);font-weight:700}
 
-#hud{
-position:absolute;
-top:10px;
-left:10px;
-}
+  /* ── HUD ── */
+  #hud{position:absolute;inset:0;pointer-events:none;z-index:50;display:none}
 
-#minimap{
-position:absolute;
-top:10px;
-left:10px;
-border:2px solid white;
-}
+  /* bars top-left */
+  #bars{position:absolute;top:16px;left:16px;display:flex;flex-direction:column;gap:5px;width:190px}
+  .bar-row{display:flex;align-items:center;gap:8px}
+  .bar-icon{font-size:12px;width:14px;text-align:center;color:var(--muted)}
+  .bar-outer{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;transition:width .12s}
+  #hp-fill{background:var(--green)}
+  #sh-fill{background:var(--accent)}
+  .bar-val{font-size:10px;color:var(--muted);min-width:26px;text-align:right}
 
-#mode{
-position:absolute;
-top:10px;
-right:10px;
-}
+  /* ammo bottom-center */
+  #ammo-hud{
+    position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:12px;
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:8px;padding:8px 20px;
+  }
+  #weapon-name{font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text);text-transform:uppercase;min-width:70px}
+  #ammo-count{font-size:22px;font-weight:900;color:var(--text);min-width:50px;text-align:right}
+  #ammo-sep{color:var(--muted);font-size:14px}
+  #ammo-reserve{font-size:14px;color:var(--muted)}
+  #reload-bar-wrap{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
+    width:160px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;display:none}
+  #reload-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width .05s linear}
 
-canvas{display:none;}
+  /* weapon slots */
+  #weapon-slots{
+    position:absolute;bottom:20px;left:16px;
+    display:flex;flex-direction:column;gap:5px;
+  }
+  .wslot{
+    background:var(--surface);border:1px solid var(--border);border-radius:5px;
+    padding:5px 10px;font-size:10px;color:var(--muted);min-width:90px;
+    display:flex;align-items:center;gap:6px;transition:all .1s;
+  }
+  .wslot.active{border-color:var(--accent);color:var(--text);background:rgba(59,130,246,.15)}
+  .wslot-key{color:var(--accent);font-weight:700;font-size:9px}
+
+  /* stats top-right */
+  #stats{
+    position:absolute;top:16px;right:160px;
+    display:flex;gap:8px;
+  }
+  .stat-pill{
+    background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:4px 12px;font-size:11px;display:flex;gap:5px;align-items:center;
+  }
+  .stat-pill b{color:var(--text)}
+  .stat-pill span{color:var(--muted)}
+
+  /* minimap */
+  #minimap-wrap{position:absolute;top:16px;right:16px}
+  #minimap{border-radius:6px;border:1px solid var(--border);display:block}
+  #minimap-label{text-align:center;font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+
+  /* kill feed */
+  #killfeed{
+    position:absolute;top:16px;left:50%;transform:translateX(-50%);
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    min-width:260px;pointer-events:none;
+  }
+  .kf-entry{
+    background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.08);
+    border-radius:4px;padding:4px 10px;font-size:11px;
+    animation:kf-in .2s ease,kf-out .4s ease 2.1s forwards;
+    white-space:nowrap;
+  }
+  @keyframes kf-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes kf-out{to{opacity:0}}
+  .kf-kill{color:var(--gold)}
+  .kf-victim{color:var(--danger)}
+  .kf-weapon{color:var(--muted);font-size:9px}
+
+  /* zone warning */
+  #zone-warn{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);
+    border-radius:8px;padding:10px 24px;font-size:14px;color:var(--danger);
+    font-weight:700;letter-spacing:2px;display:none;animation:pulse 1s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+  /* notifications */
+  #notify{
+    position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
+    font-size:13px;color:var(--gold);font-weight:700;letter-spacing:1px;
+    pointer-events:none;opacity:0;transition:opacity .2s;text-align:center;
+  }
+
+  /* death screen */
+  #death-screen{
+    position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;
+    flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:80;
+  }
+  #death-screen h2{font-size:36px;color:var(--danger);letter-spacing:4px}
+  #death-screen p{font-size:13px;color:var(--muted)}
+  #respawn-bar-wrap{width:240px;height:6px;background:rgba(255,255,255,.1);border-radius:3px}
+  #respawn-bar{height:100%;background:var(--accent);border-radius:3px;width:0;transition:width .05s linear}
+
+  /* leaderboard overlay (Tab) */
+  #leaderboard{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:20px 28px;min-width:280px;display:none;z-index:90;backdrop-filter:blur(8px);
+  }
+  #leaderboard h3{font-size:13px;letter-spacing:3px;color:var(--muted);margin-bottom:12px;text-transform:uppercase}
+  .lb-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  .lb-row:last-child{border:none}
+  .lb-rank{color:var(--muted);min-width:20px}
+  .lb-name{flex:1;padding-left:8px}
+  .lb-kills{color:var(--gold);min-width:40px;text-align:right}
+  .lb-score{color:var(--accent);min-width:50px;text-align:right}
 </style>
 </head>
-
 <body>
 
+<!-- ── MENU ── -->
 <div id="menu">
-<h1>RISE OF IKONS PRO</h1>
-<input id="name" placeholder="username"><br><br>
-<button onclick="start()">Play</button>
+  <div id="menu-logo">Rise of Ikons</div>
+  <div id="menu-sub">PRO Edition</div>
+  <div id="menu-form">
+    <input id="name-input" placeholder="Enter username" maxlength="16" autocomplete="off"/>
+    <div id="mode-select">
+      <button class="mode-btn active" data-mode="ffa">FFA</button>
+      <button class="mode-btn" data-mode="team">Teams</button>
+      <button class="mode-btn" data-mode="swords">Swords</button>
+    </div>
+    <button class="menu-btn" onclick="startGame()">▶ PLAY</button>
+  </div>
+  <div id="menu-controls">
+    <div><span>WASD</span> Move</div>
+    <div><span>Mouse</span> Aim</div>
+    <div><span>Click</span> Shoot</div>
+    <div><span>R</span> Reload</div>
+    <div><span>1-7</span> Weapons</div>
+    <div><span>Tab</span> Scores</div>
+    <div><span>E</span> Pickup</div>
+    <div><span>Esc</span> Menu</div>
+  </div>
 </div>
 
-<div id="hud"></div>
-
-<canvas id="minimap" width="200" height="200"></canvas>
-
-<div id="mode">
-<button onclick="mode('ffa')">FFA</button>
-<button onclick="mode('team')">Team</button>
-<button onclick="mode('swords')">Swords</button>
-</div>
-
+<!-- ── GAME CANVAS ── -->
 <canvas id="game"></canvas>
+
+<!-- ── HUD ── -->
+<div id="hud">
+  <div id="bars">
+    <div class="bar-row">
+      <div class="bar-icon">♥</div>
+      <div class="bar-outer"><div class="bar-fill" id="hp-fill" style="width:100%"></div></div>
+      <div class="bar-val" id="hp-val">100</div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-icon">◈</div>
+      <div class="bar-outer"><div class="bar-fill" id="sh-fill" style="width:50%"></div></div>
+      <div class="bar-val" id="sh-val">50</div>
+    </div>
+  </div>
+
+  <div id="stats">
+    <div class="stat-pill"><span>Kills</span><b id="stat-kills">0</b></div>
+    <div class="stat-pill"><span>Score</span><b id="stat-score">0</b></div>
+    <div class="stat-pill"><span>Coins</span><b id="stat-coins">50</b></div>
+  </div>
+
+  <div id="minimap-wrap">
+    <canvas id="minimap" width="148" height="148"></canvas>
+    <div id="minimap-label">MAP</div>
+  </div>
+
+  <div id="killfeed"></div>
+  <div id="zone-warn">⚠ GET IN THE ZONE</div>
+
+  <div id="weapon-slots"></div>
+
+  <div id="ammo-hud">
+    <div id="weapon-name">PISTOL</div>
+    <div id="ammo-count">12</div>
+    <div id="ammo-sep">/</div>
+    <div id="ammo-reserve">90</div>
+  </div>
+  <div id="reload-bar-wrap"><div id="reload-bar-fill"></div></div>
+
+  <div id="notify"></div>
+</div>
+
+<!-- ── DEATH SCREEN ── -->
+<div id="death-screen">
+  <h2>YOU DIED</h2>
+  <p id="death-by">Killed by —</p>
+  <div id="respawn-bar-wrap"><div id="respawn-bar"></div></div>
+  <p id="respawn-label" style="font-size:11px;color:var(--muted)">Respawning…</p>
+</div>
+
+<!-- ── LEADERBOARD ── -->
+<div id="leaderboard">
+  <h3>Leaderboard</h3>
+  <div id="lb-rows"></div>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
-
 </body>
 </html>
