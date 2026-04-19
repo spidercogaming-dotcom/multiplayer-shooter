@@ -58,6 +58,9 @@ let currentWeapon="pistol_common",currentAmmo=12,reloading=false,reloadStart=0,r
 let particles=[],damageNums=[],prevPlayers={},lerpT=0,lastStateAt=0,hitFlash=0,inZone=true,_lastInvKey="";
 let lastFrame=performance.now(),fps=0,fpsAcc=0,fpsN=0,_mmFrame=0,_rafId=null;
 let shopListings=[],shopOpen=false,settingsOpen=false;
+let deviceType="pc"; // set by device picker
+window.onDevicePicked=function(type){ deviceType=type; initMobileControls(); };
+
 
 const LERP_DUR=80, FRICTION=0.80, BASE_SPEED=260;
 
@@ -283,7 +286,6 @@ const SETTINGS_SCHEMA=[
   {tab:"controls",key:"mouseSensitivity",label:"Mouse Sensitivity",type:"range",min:0.5,max:3.0,step:0.1,fmt:v=>v.toFixed(1)+"×"},
   {tab:"controls",key:"invertY",label:"Invert Y Axis",type:"toggle"},
   {tab:"controls",key:"scopeToggle",label:"Scope Mode",type:"select",options:["toggle","hold"],labels:["Toggle (RMB)","Hold (RMB)"]},
-  {tab:"controls",key:"aimAssist",label:"Aim Assist",type:"toggle"},
 ];
 
 let _activeSettingsTab="display";
@@ -382,11 +384,15 @@ function applyMinimapSize(){
   const sizes={hidden:0,small:110,medium:160,large:210,xlarge:260};
   const sz=sizes[S.minimapSize]??160;
   const wrap=$("minimap-wrap");
-  if(S.minimapSize==="hidden"){if(wrap)wrap.style.display="none";return;}
-  if(wrap)wrap.style.display="flex";
-  mmCvs.width=sz; mmCvs.height=sz;
+  if(!wrap) return;
+  if(S.minimapSize==="hidden"){ wrap.style.display="none"; return; }
+  wrap.style.display="flex";
+  wrap.style.flexDirection="column"; // canvas THEN label — keeps map on screen
+  wrap.style.bottom="16px";
+  wrap.style.left="16px";
+  if(sz!==mmCvs.width||sz!==mmCvs.height){ mmCvs.width=sz; mmCvs.height=sz; }
   mmCvs.style.width=sz+"px"; mmCvs.style.height=sz+"px";
-  mmCvs.style.opacity=S.minimapOpacity||0.88;
+  mmCvs.style.opacity=String(S.minimapOpacity??0.88);
 }
 
 window.toggleSettings=function(){settingsOpen=!settingsOpen;if(settingsOpen)buildSettingsUI();settingsEl.style.display=settingsOpen?"flex":"none";};
@@ -457,6 +463,8 @@ function sendInput(){
   if(keys["s"]||keys["arrowdown"])dy+=1;
   if(keys["a"]||keys["arrowleft"])dx-=1;
   if(keys["d"]||keys["arrowright"])dx+=1;
+  // Mobile joystick
+  if(deviceType==="mobile"&&joystickActive){dx+=touchDx;dy+=touchDy;}
   const wMx=myPos.x+(mx-canvas.width/2),wMy=myPos.y+(my-canvas.height/2);
   myAngle=Math.atan2(wMy-myPos.y,wMx-myPos.x);
   if(dx!==0||dy!==0)socket.emit("input",{dx,dy,angle:myAngle});
@@ -470,6 +478,8 @@ function applyPrediction(dt){
   if(keys["s"]||keys["arrowdown"])dy+=1;
   if(keys["a"]||keys["arrowleft"])dx-=1;
   if(keys["d"]||keys["arrowright"])dx+=1;
+  // Mobile joystick
+  if(deviceType==="mobile"&&joystickActive){dx+=touchDx;dy+=touchDy;}
   if(dx!==0||dy!==0){
     const mag=Math.sqrt(dx*dx+dy*dy),w=weapons[currentWeapon];
     const spd=(w?.passive==="speed_boost")?BASE_SPEED*1.25:BASE_SPEED;
@@ -803,6 +813,136 @@ function loop(now){
 
   const me=players[myId];
   if(me?.inventory){const k=me.inventory.join(",");if(k!==_lastInvKey){_lastInvKey=k;buildWeaponSlots();updatePassiveHud();}}
+}
+
+
+// ─── Mobile touch controls ────────────────────────────────────────────────────
+let joystickActive=false, joystickId=-1;
+let joystickOriginX=0, joystickOriginY=0;
+let touchDx=0, touchDy=0;
+let aimTouchId=-1, aimLastX=0, aimLastY=0;
+let mobileShooting=false, mobileShootInterval=null;
+
+function initMobileControls(){
+  const mc=document.getElementById("mobile-controls");
+  const ab=document.getElementById("action-btns");
+  if(!mc) return;
+
+  if(deviceType!=="mobile"){
+    mc.style.display="none";
+    if(ab) ab.style.display="flex";
+    canvas.style.cursor="crosshair";
+    return;
+  }
+
+  mc.style.display="block";
+  if(ab) ab.style.display="none"; // mobile has its own
+  canvas.style.cursor="none"; // no cursor on mobile
+
+  const jZone=document.getElementById("joystick-zone");
+  const jThumb=document.getElementById("joystick-thumb");
+  const aimZone=document.getElementById("aim-zone");
+  const fireBtn=document.getElementById("fire-btn");
+  const reloadBtn=document.getElementById("reload-btn");
+  const scopeBtn=document.getElementById("mob-scope-btn");
+  const weapPrev=document.getElementById("mob-weap-prev");
+  const weapNext=document.getElementById("mob-weap-next");
+
+  // ── Joystick ──────────────────────────────────────────────────────────────
+  function jStart(e){
+    e.preventDefault();
+    const t=e.changedTouches[0];
+    joystickActive=true; joystickId=t.identifier;
+    joystickOriginX=t.clientX; joystickOriginY=t.clientY;
+    touchDx=0; touchDy=0;
+  }
+  function jMove(e){
+    e.preventDefault();
+    for(let i=0;i<e.changedTouches.length;i++){
+      const t=e.changedTouches[i];
+      if(t.identifier!==joystickId) continue;
+      const dx=t.clientX-joystickOriginX, dy=t.clientY-joystickOriginY;
+      const len=Math.sqrt(dx*dx+dy*dy)||1;
+      const clamped=Math.min(len,55);
+      touchDx=(dx/len)*(clamped/55);
+      touchDy=(dy/len)*(clamped/55);
+      // Move thumb visual
+      const tx=touchDx*55, ty=touchDy*55;
+      if(jThumb){ jThumb.style.transform=`translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)`; }
+    }
+  }
+  function jEnd(e){
+    for(let i=0;i<e.changedTouches.length;i++){
+      if(e.changedTouches[i].identifier===joystickId){
+        joystickActive=false; joystickId=-1; touchDx=0; touchDy=0;
+        if(jThumb) jThumb.style.transform="translate(-50%,-50%)";
+      }
+    }
+  }
+  if(jZone){ jZone.addEventListener("touchstart",jStart,{passive:false}); jZone.addEventListener("touchmove",jMove,{passive:false}); jZone.addEventListener("touchend",jEnd,{passive:false}); jZone.addEventListener("touchcancel",jEnd,{passive:false}); }
+
+  // ── Aim zone (pan to aim) ─────────────────────────────────────────────────
+  function aimStart(e){
+    e.preventDefault();
+    for(let i=0;i<e.changedTouches.length;i++){
+      const t=e.changedTouches[i];
+      if(aimTouchId===-1&&t.clientX>window.innerWidth*0.4){
+        aimTouchId=t.identifier; aimLastX=t.clientX; aimLastY=t.clientY;
+      }
+    }
+  }
+  function aimMove(e){
+    e.preventDefault();
+    for(let i=0;i<e.changedTouches.length;i++){
+      const t=e.changedTouches[i];
+      if(t.identifier!==aimTouchId) continue;
+      const sens=(S.mouseSensitivity||1)*1.8;
+      mx+=( t.clientX-aimLastX)*sens;
+      my+=( t.clientY-aimLastY)*sens;
+      mx=Math.max(0,Math.min(canvas.width,mx));
+      my=Math.max(0,Math.min(canvas.height,my));
+      aimLastX=t.clientX; aimLastY=t.clientY;
+    }
+  }
+  function aimEnd(e){
+    for(let i=0;i<e.changedTouches.length;i++){
+      if(e.changedTouches[i].identifier===aimTouchId) aimTouchId=-1;
+    }
+  }
+  if(aimZone){ aimZone.addEventListener("touchstart",aimStart,{passive:false}); aimZone.addEventListener("touchmove",aimMove,{passive:false}); aimZone.addEventListener("touchend",aimEnd,{passive:false}); aimZone.addEventListener("touchcancel",aimEnd,{passive:false}); }
+
+  // ── Fire button ───────────────────────────────────────────────────────────
+  if(fireBtn){
+    fireBtn.addEventListener("touchstart",e=>{
+      e.preventDefault(); fireBtn.classList.add("active");
+      doShoot();
+      mobileShootInterval=setInterval(()=>{ const w=weapons[currentWeapon]; if(w?.auto) doShoot(); },50);
+    });
+    fireBtn.addEventListener("touchend",e=>{ e.preventDefault(); fireBtn.classList.remove("active"); clearInterval(mobileShootInterval); });
+    fireBtn.addEventListener("touchcancel",e=>{ fireBtn.classList.remove("active"); clearInterval(mobileShootInterval); });
+  }
+
+  // ── Reload ────────────────────────────────────────────────────────────────
+  if(reloadBtn) reloadBtn.addEventListener("touchstart",e=>{ e.preventDefault(); socket.emit("reload"); });
+
+  // ── Scope toggle ──────────────────────────────────────────────────────────
+  if(scopeBtn) scopeBtn.addEventListener("touchstart",e=>{ e.preventDefault(); scoped=!scoped; });
+
+  // ── Weapon cycle ──────────────────────────────────────────────────────────
+  if(weapPrev) weapPrev.addEventListener("touchstart",e=>{
+    e.preventDefault();
+    const me=players[myId]; if(!me?.inventory) return;
+    const idx=me.inventory.indexOf(currentWeapon);
+    const newW=me.inventory[(idx-1+me.inventory.length)%me.inventory.length];
+    socket.emit("switchWeapon",newW);
+  });
+  if(weapNext) weapNext.addEventListener("touchstart",e=>{
+    e.preventDefault();
+    const me=players[myId]; if(!me?.inventory) return;
+    const idx=me.inventory.indexOf(currentWeapon);
+    const newW=me.inventory[(idx+1)%me.inventory.length];
+    socket.emit("switchWeapon",newW);
+  });
 }
 
 applyAllSettings();
