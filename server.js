@@ -24,10 +24,11 @@ const io     = new Server(server, { cors:{ origin:"*" }, pingInterval:10000, pin
 
 // Serve from "public/" if it exists, otherwise serve from current directory
 const fs_=require("fs");
+const path_=require("path");
 const staticDir=fs_.existsSync("public")?"public":".";
-app.use(require("express").static(staticDir));
+app.use(express.static(staticDir));
 // Explicit fallback route so index.html is always served
-app.get("/",(req,res)=>res.sendFile(require("path").join(__dirname,staticDir,"index.html")));
+app.get("/",(req,res)=>res.sendFile(path_.join(__dirname,staticDir,"index.html")));
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CFG = {
@@ -326,12 +327,26 @@ io.on("connection",socket=>{
   if (Object.keys(players).length>=CFG.MAX_PLAYERS) { socket.emit("serverFull"); socket.disconnect(true); return; }
 
   socket.on("joinGame",data=>{
-    const p=createPlayer(socket.id,data.name);
-    if (gameMode==="team") { const c={red:0,blue:0}; for (const q of Object.values(players)) if (q.team) c[q.team]++; p.team=c.red<=c.blue?"red":"blue"; }
-    players[socket.id]=p;
-    socket.emit("init",{id:socket.id,obstacles:OBSTACLES,weapons:CATALOGUE,rarities:RARITY,rarityOrder:RARITY_ORDER,mapSize:CFG.MAP_SIZE,mode:gameMode,shop:shopListings});
-    socket.emit("crateSync",crates.map(c=>({id:c.id,x:c.x,y:c.y,tier:c.tier,open:c.open})));
-    broadcastLB();
+    const name=(data.name||"Player").slice(0,16).trim();
+    // Owner name check — challenge for password
+    if(OWNER_NAMES.has(name.toLowerCase())){
+      pendingOwners.add(socket.id);
+      socket._pendingName=name;
+      socket.emit("ownerChallenge");
+      return;
+    }
+    _finalizeJoin(socket,name);
+  });
+
+  socket.on("ownerPassSubmit",pass=>{
+    if(!pendingOwners.has(socket.id)) return;
+    pendingOwners.delete(socket.id);
+    if(pass===OWNER_PASS){
+      ownerSockets.add(socket.id);
+      _finalizeJoin(socket,socket._pendingName);
+    } else {
+      socket.emit("ownerAuthFail");
+    }
   });
 
   socket.on("input",data=>{
