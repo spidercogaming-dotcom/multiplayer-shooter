@@ -8,7 +8,12 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, { cors:{ origin:"*" }, pingInterval:10000, pingTimeout:5000 });
 
-app.use(express.static("public"));
+// Serve from "public/" if it exists, otherwise serve from current directory
+const fs_=require("fs");
+const staticDir=fs_.existsSync("public")?"public":".";
+app.use(require("express").static(staticDir));
+// Explicit fallback route so index.html is always served
+app.get("/",(req,res)=>res.sendFile(require("path").join(__dirname,staticDir,"index.html")));
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CFG = {
@@ -388,6 +393,9 @@ io.on("connection",socket=>{
   });
 
   socket.on("getShop",()=>socket.emit("shopUpdate",shopListings));
+
+  // Ping measurement
+  socket.on("ping_check",()=>socket.emit("pong_check"));
 
   socket.on("setMode",m=>{
     if (!["ffa","team","swords"].includes(m)) return;
