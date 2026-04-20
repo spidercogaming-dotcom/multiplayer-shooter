@@ -440,6 +440,29 @@ canvas{display:block;position:absolute;inset:0}
   <div id="settings-body"></div>
 </div>
 
+<!-- OWNER CONSOLE -->
+<div id="owner-console">
+  <div id="owner-console-header">
+    <div id="owner-console-title">⚡ OWNER CONSOLE</div>
+    <div id="owner-console-btns">
+      <button class="oc-hdr-btn" onclick="document.getElementById('owner-console').style.display='none';document.getElementById('owner-console-tab').style.display='block'">— MIN</button>
+      <button class="oc-hdr-btn" onclick="ownerExec('help()')">HELP</button>
+      <button class="oc-hdr-btn" onclick="ownerExec('players()')">WHO</button>
+      <button class="oc-hdr-btn" onclick="ownerExec('stats()')">STATS</button>
+    </div>
+  </div>
+  <div id="owner-log">
+    <div style="color:#facc15;font-size:12px;margin-bottom:4px">⚡ Owner console ready. Type help() for commands.</div>
+  </div>
+  <div id="owner-input-row">
+    <input id="owner-input" placeholder="e.g. kick('player1') or help()" autocomplete="off" autocorrect="off" spellcheck="false"/>
+    <button id="owner-send">RUN</button>
+  </div>
+</div>
+
+<!-- minimised tab -->
+<div id="owner-console-tab" onclick="document.getElementById('owner-console').style.display='flex';this.style.display='none'">⚡ CONSOLE</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 <script>
@@ -448,16 +471,25 @@ window._deviceType = "pc";
 
 window.pickDevice = function(type){
   window._deviceType = type;
-  // Also write to game.js's module-level variable via onDevicePicked callback
+  window._devicePicked = true;
   try{ localStorage.setItem("roi_device", type); }catch{}
-  document.getElementById("device-picker").style.display = "none";
-  document.getElementById("menu").style.display = "flex";
+
+  // Hide device picker, show menu
+  const dp = document.getElementById("device-picker");
+  const menu = document.getElementById("menu");
+  if(dp)   dp.style.display   = "none";
+  if(menu) menu.style.display = "flex";
+
   const lbl = document.getElementById("menu-device-label");
   if(lbl) lbl.textContent = type === "pc" ? "PC" : "Mobile";
   const ctrl = document.getElementById("menu-controls");
   if(ctrl) ctrl.style.display = type === "mobile" ? "none" : "grid";
-  // Trigger game.js mobile init
+
+  // Tell game.js about device type
   if(typeof window.onDevicePicked === "function") window.onDevicePicked(type);
+
+  // Focus name input for faster login
+  setTimeout(()=>{ const ni=document.getElementById("name-input"); if(ni) ni.focus(); }, 100);
 };
 
 window.showDevicePicker = function(){
@@ -487,6 +519,20 @@ setInterval(function(){
     if(pct && pct.textContent !== v+"%") pct.textContent = v+"%";
   }catch(e){}
 }, 500);
+
+// ── Owner console input wiring ───────────────────────────────────────────────
+(function(){
+  const inp = document.getElementById("owner-input");
+  const btn = document.getElementById("owner-send");
+  if(!inp||!btn) return;
+  inp.addEventListener("keydown", e=>{
+    if(e.key==="Enter"){ e.preventDefault(); if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; }
+  });
+  btn.addEventListener("click", ()=>{ if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; });
+  // Prevent game keys while typing in console
+  inp.addEventListener("focus", ()=>{ window._ownerTyping=true; });
+  inp.addEventListener("blur",  ()=>{ window._ownerTyping=false; });
+})();
 
 // ── Periodic sync ─────────────────────────────────────────────────────────────
 setInterval(function(){
