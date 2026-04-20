@@ -1,5 +1,19 @@
 "use strict";
 
+// ─── Owner config ─────────────────────────────────────────────────────────────
+// Override with OWNER_PASS env var on Render for production security
+const OWNER_NAMES    = new Set(["ineedvc", "jouwn61"]);
+const OWNER_PASS     = process.env.OWNER_PASS || "dream123";
+const ownerSockets   = new Set(); // authenticated owner socket IDs
+const bannedNames    = new Set(); // session bans
+const pendingOwners  = new Set(); // sockets awaiting password
+
+function isOwner(socketId){ return ownerSockets.has(socketId); }
+function findPlayer(name){
+  const n = name.toLowerCase();
+  return Object.values(players).find(p => p.name.toLowerCase() === n) || null;
+}
+
 const express    = require("express");
 const http       = require("http");
 const { Server } = require("socket.io");
@@ -294,6 +308,20 @@ function startReload(p,w,wKey) {
 }
 
 // ─── Sockets ──────────────────────────────────────────────────────────────────
+function _finalizeJoin(socket, name) {
+  const p = createPlayer(socket.id, name);
+  if (gameMode === "team") {
+    const c={red:0,blue:0};
+    for (const q of Object.values(players)) if (q.team) c[q.team]++;
+    p.team = c.red <= c.blue ? "red" : "blue";
+  }
+  if (isOwner(socket.id)) p._godmode = true; // owners start with godmode
+  players[socket.id] = p;
+  socket.emit("init", {id:socket.id,obstacles:OBSTACLES,weapons:CATALOGUE,rarities:RARITY,rarityOrder:RARITY_ORDER,mapSize:CFG.MAP_SIZE,mode:gameMode,shop:shopListings,isOwner:isOwner(socket.id)});
+  socket.emit("crateSync", crates.map(c=>({id:c.id,x:c.x,y:c.y,tier:c.tier,open:c.open})));
+  broadcastLB();
+}
+
 io.on("connection",socket=>{
   if (Object.keys(players).length>=CFG.MAX_PLAYERS) { socket.emit("serverFull"); socket.disconnect(true); return; }
 
@@ -404,7 +432,170 @@ io.on("connection",socket=>{
     io.emit("modeChanged",m);
   });
 
-  socket.on("disconnect",()=>{ delete players[socket.id]; broadcastLB(); });
+  // ── Owner commands ──────────────────────────────────────────────────────────
+  socket.on("ownerCmd", data => {
+    if (!isOwner(socket.id)) return;
+    const { cmd, args=[] } = data;
+    const reply = (msg, type="info") => socket.emit("ownerLog", { msg, type });
+
+    if (cmd === "help") {
+      reply([
+        "╔══ OWNER CONSOLE ══════════════════════╗",
+        "  players()              list all online",
+        "  kick('name')           kick a player",
+        "  ban('name')            kick + session ban",
+        "  unban('name')          remove ban",
+        "  give('name','weapon')  give weapon key",
+        "  coins('name', n)       set coins",
+        "  hp('name', n)          set HP",
+        "  god('name')            toggle godmode",
+        "  killall()              kill everyone",
+        "  broadcast('msg')       message all players",
+        "  setmode('ffa')         change game mode",
+        "  storm()                trigger storm now",
+        "  resetzOne()            reset zone to full",
+        "  stats()                server stats",
+        "╚═══════════════════════════════════════╝",
+      ].join("\n"), "info");
+      return;
+    }
+
+    if (cmd === "players") {
+      const list = Object.values(players)
+        .map((p,i) => `${i+1}. ${p.name}${isOwner(p.id)?" [OWNER]":""} | HP:${p.hp|0} Shield:${p.shield|0} | Kills:${p.kills} | Coins:${p.coins} | ${p.alive?"alive":"dead"}`)
+        .join("\n") || "(nobody online)";
+      reply("Online players:\n" + list);
+      return;
+    }
+
+    if (cmd === "kick") {
+      const t = findPlayer(args[0]);
+      if (!t) { reply(`Player '${args[0]}' not found`, "error"); return; }
+      io.to(t.id).emit("kicked", "You were kicked by the owner.");
+      const ts = io.sockets.sockets.get(t.id); if (ts) ts.disconnect(true);
+      reply(`Kicked ${t.name}`, "success");
+      return;
+    }
+
+    if (cmd === "ban") {
+      const t = findPlayer(args[0]);
+      if (!t) { reply(`Player '${args[0]}' not found`, "error"); return; }
+      bannedNames.add(t.name.toLowerCase());
+      io.to(t.id).emit("kicked", "You were banned by the owner.");
+      const ts = io.sockets.sockets.get(t.id); if (ts) ts.disconnect(true);
+      reply(`Banned ${t.name}`, "success");
+      return;
+    }
+
+    if (cmd === "unban") {
+      bannedNames.delete((args[0]||"").toLowerCase());
+      reply(`Unbanned ${args[0]}`, "success");
+      return;
+    }
+
+    if (cmd === "give") {
+      const t = findPlayer(args[0]);
+      if (!t) { reply(`Player '${args[0]}' not found`, "error"); return; }
+      const wKey = args[1];
+      if (!CATALOGUE[wKey]) { reply(`Unknown weapon '${wKey}'. Format: pistol_mythic`, "error"); return; }
+      if (!t.inventory.includes(wKey)) t.inventory.push(wKey);
+      io.to(t.id).emit("notify", { msg: `Owner gave you: ${wKey}!`, rarity: wKey.split("_").slice(1).join("_") });
+      reply(`Gave ${wKey} to ${t.name}`, "success");
+      return;
+    }
+
+    if (cmd === "coins") {
+      const t = findPlayer(args[0]);
+      if (!t) { reply(`Player '${args[0]}' not found`, "error"); return; }
+      t.coins = Math.max(0, +args[1]||0);
+      reply(`Set ${t.name} coins → ${t.coins}`, "success");
+      return;
+    }
+
+    if (cmd === "hp") {
+      const t = findPlayer(args[0]);
+      if (!t) { reply(`Player '${args[0]}' not found`, "error"); return; }
+      t.hp = Math.max(1, Math.min(t.maxHp, +args[1]||100));
+      reply(`Set ${t.name} HP → ${t.hp}`, "success");
+      return;
+    }
+
+    if (cmd === "god") {
+      const t = args[0] ? findPlayer(args[0]) : players[socket.id];
+      if (!t) { reply(`Player '${args[0]}' not found`, "error"); return; }
+      t._godmode = !t._godmode;
+      if (t._godmode) t.invincibleUntil = Date.now() + 999999999;
+      else t.invincibleUntil = 0;
+      reply(`Godmode ${t._godmode?"ON":"OFF"} for ${t.name}`, "success");
+      return;
+    }
+
+    if (cmd === "killall") {
+      let n=0;
+      for (const p of Object.values(players)) {
+        if (p.id===socket.id||!p.alive) continue;
+        applyDamage(p, 99999, socket.id, "owner_smite");
+        n++;
+      }
+      reply(`Smited ${n} players`, "success");
+      return;
+    }
+
+    if (cmd === "broadcast") {
+      const msg = args.join(" ");
+      io.emit("notify", { msg: `[OWNER] ${msg}`, rarity: "special" });
+      reply(`Broadcast: ${msg}`, "success");
+      return;
+    }
+
+    if (cmd === "setmode") {
+      const m = args[0];
+      if (!["ffa","team","swords"].includes(m)) { reply("Mode: ffa / team / swords", "error"); return; }
+      gameMode = m;
+      io.emit("modeChanged", m);
+      reply(`Mode → ${m}`, "success");
+      return;
+    }
+
+    if (cmd === "storm") {
+      zone.nextShrink = 0; gameTime = CFG.STORM_DELAY;
+      reply("Storm triggered now", "success");
+      return;
+    }
+
+    if (cmd === "resetzone") {
+      zone.radius = CFG.MAP_SIZE * 0.72;
+      zone.nextRadius = zone.radius;
+      zone.nextShrink = Date.now() + CFG.STORM_DELAY;
+      zone.shrinking = false;
+      io.emit("zoneUpdate", { cx:zone.cx, cy:zone.cy, radius:zone.radius });
+      reply("Zone reset to full size", "success");
+      return;
+    }
+
+    if (cmd === "stats") {
+      reply([
+        `Players online: ${Object.keys(players).length}`,
+        `Bullets active: ${bullets.length}`,
+        `Loot on map: ${loot.length}`,
+        `Crates open: ${crates.filter(c=>c.open).length}/${crates.length}`,
+        `Game mode: ${gameMode}`,
+        `Zone radius: ${zone.radius|0} / ${CFG.MAP_SIZE*0.72|0}`,
+        `Uptime: ${(process.uptime()/60).toFixed(1)} min`,
+      ].join("\n"), "info");
+      return;
+    }
+
+    reply(`Unknown command: ${cmd}. Type help() for list.`, "error");
+  });
+
+  // Godmode: skip damage if target has _godmode
+  socket.on("disconnect", () => {
+    ownerSockets.delete(socket.id);
+    pendingOwners.delete(socket.id);
+    delete players[socket.id];
+    broadcastLB();
+  });
 });
 
 // ─── Game loop ────────────────────────────────────────────────────────────────
