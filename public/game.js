@@ -3,7 +3,7 @@
 // ─── Settings (persisted to localStorage) ────────────────────────────────────
 const DEFAULT_SETTINGS = {
   // display
-  showFps:true, showPing:true, gridStyle:"normal", renderScale:1.0,
+  showFps:true, showPing:true, gridStyle:"normal", renderScale:0.75,
   fpsLimit:0, showZoneWarning:true, bloodParticles:true, bulletTrails:true, rarityAuras:true,
   // hud
   hudScale:1.0, minimapSize:"medium", minimapOpacity:0.88, minimapZoom:"full",
@@ -39,9 +39,18 @@ const mmCvs  = document.getElementById("minimap");
 const mctx   = mmCvs.getContext("2d");
 
 function resizeCanvas(){
-  const sc=S.renderScale||1;
-  canvas.width=Math.round(window.innerWidth*sc); canvas.height=Math.round(window.innerHeight*sc);
-  canvas.style.width=window.innerWidth+"px"; canvas.style.height=window.innerHeight+"px";
+  const sc=Math.max(0.25,Math.min(1.0,S.renderScale||0.75));
+  const W=Math.round(window.innerWidth*sc), H=Math.round(window.innerHeight*sc);
+  if(canvas.width===W&&canvas.height===H) return; // avoid redundant resize flicker
+  canvas.width=W; canvas.height=H;
+  canvas.style.width=window.innerWidth+"px";
+  canvas.style.height=window.innerHeight+"px";
+  // Use nearest-neighbour scaling so low-res looks crisp instead of blurry
+  const imgSmooth = sc >= 0.9;
+  ctx.imageSmoothingEnabled = imgSmooth;
+  canvas.style.imageRendering = imgSmooth ? "auto" : "pixelated";
+  // Reset mx/my to canvas centre on resize
+  mx = canvas.width/2; my = canvas.height/2;
 }
 resizeCanvas();
 window.addEventListener("resize",resizeCanvas);
@@ -243,7 +252,7 @@ const SETTINGS_SCHEMA=[
   {tab:"display",key:"showFps",label:"Show FPS Counter",type:"toggle"},
   {tab:"display",key:"showPing",label:"Show Ping",type:"toggle"},
   {tab:"display",key:"gridStyle",label:"Grid Style",type:"select",options:["normal","subtle","off"]},
-  {tab:"display",key:"renderScale",label:"Render Scale",type:"select",options:[0.5,0.75,1.0],labels:["50% (potato)","75% (balanced)","100% (native)"]},
+  {tab:"display",key:"renderScale",label:"Render Scale",type:"range",min:0.25,max:1.0,step:0.05,fmt:v=>Math.round(v*100)+"%  "+(v<=0.4?"(potato)":v<=0.6?"(low)":v<=0.8?"(balanced)":"(high)")},
   {tab:"display",key:"fpsLimit",label:"FPS Cap",type:"select",options:[0,30,60,120,144,240],labels:["Unlimited","30","60","120","144","240"]},
   {tab:"display",key:"showZoneWarning",label:"Zone Warning Overlay",type:"toggle"},
   {tab:"display",key:"bloodParticles",label:"Blood Particles",type:"toggle"},
@@ -415,9 +424,23 @@ document.addEventListener("keydown",e=>{
     saveSetting("minimapSize",sizes[(idx+1)%sizes.length]);
     applyMinimapSize();
   }
+  // Quick resolution shortcuts
+  if(e.key==="-"||e.key==="_"){
+    const v=Math.max(0.25,Math.round((+S.renderScale-0.1)*20)/20);
+    saveSetting("renderScale",v); resizeCanvas();
+    showNotify("Resolution: "+Math.round(v*100)+"%",null);
+  }
+  if(e.key==="="||e.key==="+"){
+    const v=Math.min(1.0,Math.round((+S.renderScale+0.1)*20)/20);
+    saveSetting("renderScale",v); resizeCanvas();
+    showNotify("Resolution: "+Math.round(v*100)+"%",null);
+  }
 });
 document.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;if(e.key==="Tab")lbEl.style.display="none";});
-canvas.addEventListener("mousemove",e=>{const sc=S.renderScale||1;mx=e.clientX*sc;my=e.clientY*sc;});
+canvas.addEventListener("mousemove",e=>{
+  const sc=S.renderScale||0.75;
+  mx=e.clientX*sc; my=e.clientY*sc;
+});
 canvas.addEventListener("mousedown",e=>{if(!gameActive||!myId||e.button!==0)return;mouseHeld=true;doShoot();});
 canvas.addEventListener("mouseup",()=>mouseHeld=false);
 canvas.addEventListener("mouseleave",()=>mouseHeld=false);
@@ -497,30 +520,54 @@ function w2s(wx,wy){return{x:wx-camX+canvas.width/2,y:wy-camY+canvas.height/2};}
 function rr(c,x,y,w,h,r){c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
 const TILE=80;
 
+// Grid tile size — larger tile = fewer lines = faster
+const GRID_TILE=S.renderScale<0.5?160:S.renderScale<0.75?120:80;
 function drawBackground(){
   ctx.fillStyle="#0f172a";ctx.fillRect(0,0,canvas.width,canvas.height);
   if(S.gridStyle!=="off"){
-    const a=S.gridStyle==="subtle"?0.22:0.50;
+    const tile=S.renderScale<0.5?160:S.renderScale<0.75?120:80;
+    const a=S.gridStyle==="subtle"?0.18:0.40;
     ctx.strokeStyle=`rgba(30,41,59,${a})`;ctx.lineWidth=0.5;
-    const ox=((-camX%TILE)+canvas.width/2)%TILE,oy=((-camY%TILE)+canvas.height/2)%TILE;
+    const ox=((-camX%tile)+canvas.width/2)%tile, oy=((-camY%tile)+canvas.height/2)%tile;
     ctx.beginPath();
-    for(let x=ox-TILE;x<canvas.width+TILE;x+=TILE){ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);}
-    for(let y=oy-TILE;y<canvas.height+TILE;y+=TILE){ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);}
+    for(let x=ox-tile;x<canvas.width+tile;x+=tile){ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);}
+    for(let y=oy-tile;y<canvas.height+tile;y+=tile){ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);}
     ctx.stroke();
   }
   const c0=w2s(0,0),c1=w2s(mapSize,0),c2=w2s(mapSize,mapSize),c3=w2s(0,mapSize);
-  ctx.strokeStyle="rgba(59,130,246,0.28)";ctx.lineWidth=3;
+  ctx.strokeStyle="rgba(59,130,246,0.25)";ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(c0.x,c0.y);ctx.lineTo(c1.x,c1.y);ctx.lineTo(c2.x,c2.y);ctx.lineTo(c3.x,c3.y);ctx.closePath();ctx.stroke();
 }
 
+// Cache vignette gradient — only rebuild on canvas resize
+let _vigW=0,_vigH=0,_vigGrad=null;
+function getStormVignette(){
+  if(canvas.width!==_vigW||canvas.height!==_vigH){
+    _vigW=canvas.width;_vigH=canvas.height;
+    _vigGrad=ctx.createRadialGradient(_vigW/2,_vigH/2,_vigW*0.28,_vigW/2,_vigH/2,_vigW*0.9);
+    _vigGrad.addColorStop(0,"rgba(239,68,68,0)");
+    _vigGrad.addColorStop(1,"rgba(239,68,68,0.30)");
+  }
+  return _vigGrad;
+}
+
+// Zone dash offset — updated at most 30fps to avoid thrash
+let _dashOff=0,_lastDash=0;
 function drawZone(){
   const c=w2s(zone.cx,zone.cy),sr=zone.radius*(canvas.width/mapSize);
   ctx.save();
+  // Zone safe fill (very faint)
   ctx.beginPath();ctx.arc(c.x,c.y,sr,0,Math.PI*2);
-  ctx.fillStyle="rgba(59,130,246,0.03)";ctx.fill();
-  ctx.strokeStyle="rgba(59,130,246,0.5)";ctx.lineWidth=2;
-  ctx.setLineDash([12,8]);ctx.lineDashOffset=-((Date.now()/40)%20);ctx.stroke();ctx.setLineDash([]);ctx.restore();
-  if(!inZone){const vg=ctx.createRadialGradient(canvas.width/2,canvas.height/2,canvas.width*0.3,canvas.width/2,canvas.height/2,canvas.width*0.88);vg.addColorStop(0,"rgba(239,68,68,0)");vg.addColorStop(1,"rgba(239,68,68,0.28)");ctx.fillStyle=vg;ctx.fillRect(0,0,canvas.width,canvas.height);}
+  ctx.fillStyle="rgba(59,130,246,0.025)";ctx.fill();
+  // Border — only update dash offset ~20fps
+  const nowD=Date.now();
+  if(nowD-_lastDash>50){_dashOff=(nowD/40)%20;_lastDash=nowD;}
+  ctx.strokeStyle="rgba(59,130,246,0.45)";ctx.lineWidth=2;
+  ctx.setLineDash([12,8]);ctx.lineDashOffset=-_dashOff;ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  // Storm vignette (cached gradient)
+  if(!inZone){ctx.fillStyle=getStormVignette();ctx.fillRect(0,0,canvas.width,canvas.height);}
 }
 
 function drawObstacles(){
@@ -578,9 +625,9 @@ function drawPlayers(){
     const s=w2s(id===myId?myPos.x:rx,id===myId?myPos.y:ry);
     if(s.x<-40||s.x>canvas.width+40||s.y<-40||s.y>canvas.height+40)continue;
     const R=18,rarity=p.rarity||"common",rc=getRarityColor(rarity),ridx=(rarityOrder||[]).indexOf(rarity);
-    if(ridx>=2){ctx.save();ctx.globalAlpha=0.14+Math.sin(Date.now()/350)*0.06;ctx.fillStyle=rc;ctx.beginPath();ctx.arc(s.x,s.y,R+9,0,Math.PI*2);ctx.fill();ctx.restore();}
+    if(S.rarityAuras&&ridx>=2){ctx.save();ctx.globalAlpha=0.13;ctx.fillStyle=rc;ctx.beginPath();ctx.arc(s.x,s.y,R+9,0,Math.PI*2);ctx.fill();ctx.restore();}
     if(p.invincible){ctx.save();ctx.globalAlpha=0.28+Math.sin(Date.now()/80)*0.26;ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.beginPath();ctx.arc(s.x,s.y,R+5,0,Math.PI*2);ctx.stroke();ctx.restore();}
-    ctx.fillStyle="rgba(0,0,0,0.25)";ctx.beginPath();ctx.ellipse(s.x,s.y+R-2,R*0.65,5,0,0,Math.PI*2);ctx.fill();
+    if(S.renderScale>0.5){ctx.fillStyle="rgba(0,0,0,0.22)";ctx.beginPath();ctx.ellipse(s.x,s.y+R-2,R*0.65,5,0,0,Math.PI*2);ctx.fill();}
     const skin=gameMode==="team"?(p.team==="red"?"#ef4444":"#3b82f6"):p.skin;
     ctx.fillStyle=skin;ctx.strokeStyle=id===myId?rc:"rgba(255,255,255,0.22)";ctx.lineWidth=id===myId?2.5:1;
     ctx.beginPath();ctx.arc(s.x,s.y,R,0,Math.PI*2);ctx.fill();ctx.stroke();
@@ -782,7 +829,14 @@ function loop(now){
 
   // FPS
   fpsN++;fpsAcc+=dt;
-  if(fpsAcc>=0.5){fps=Math.round(fpsN/fpsAcc);fpsN=0;fpsAcc=0;if(S.showFps)fpsEl.textContent=fps+" fps";if(S.showPing)pingEl.textContent=ping+" ms";}
+  if(fpsAcc>=0.5){
+    fps=Math.round(fpsN/fpsAcc);fpsN=0;fpsAcc=0;
+    if(S.showFps&&fpsEl){
+      fpsEl.textContent=fps+" fps · "+Math.round((S.renderScale||0.75)*100)+"%";
+      fpsEl.style.color=fps<30?"#ef4444":fps<50?"#facc15":"#64748b";
+    }
+    if(S.showPing&&pingEl) pingEl.textContent=ping+" ms";
+  }
 
   sendInput();
   applyPrediction(dt);
