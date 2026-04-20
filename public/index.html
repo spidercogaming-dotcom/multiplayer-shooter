@@ -111,6 +111,25 @@ canvas{display:block;position:absolute;inset:0}
 
 #notify{position:absolute;bottom:86px;left:50%;transform:translateX(-50%) translateY(0);font-size:13px;font-weight:700;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s;text-align:center;white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.9)}
 
+/* Resolution quick bar — top centre, always visible */
+#res-bar{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  display:none; /* shown only in game */
+  align-items:center;gap:8px;
+  background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;padding:4px 14px;pointer-events:all;z-index:55;
+}
+#res-bar-label{font-size:10px;color:#64748b;letter-spacing:1px}
+#res-slider{
+  -webkit-appearance:none;appearance:none;
+  width:90px;height:3px;border-radius:2px;
+  background:linear-gradient(to right,#3b82f6 var(--pct,75%),rgba(255,255,255,.15) var(--pct,75%));
+  outline:none;cursor:pointer;
+}
+#res-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#3b82f6;cursor:pointer;border:2px solid #1e3a8a}
+#res-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#3b82f6;cursor:pointer;border:2px solid #1e3a8a}
+#res-pct{font-size:11px;font-weight:700;color:#f1f5f9;min-width:36px;text-align:right}
+
 #action-btns{position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;pointer-events:all;z-index:10}
 .action-btn{background:var(--sf);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-family:var(--mono);font-size:11px;color:var(--gold);cursor:pointer;letter-spacing:1px;transition:background .1s}
 .action-btn:hover{background:rgba(250,204,21,.1)}
@@ -306,6 +325,7 @@ canvas{display:block;position:absolute;inset:0}
     <div><span>F</span> Open Crate</div>
     <div><span>B</span> Shop</div>
     <div><span>P</span> Settings</div>
+    <div><span>-/+</span> Resolution</div>
     <div><span>Tab</span> Scores</div>
     <div><span>M</span> Minimap</div>
   </div>
@@ -344,6 +364,14 @@ canvas{display:block;position:absolute;inset:0}
     <div id="ammo-count">12</div><div id="ammo-sep">/</div><div id="ammo-reserve">90</div>
   </div>
   <div id="reload-bar-wrap"><div id="reload-bar-fill"></div></div>
+  <!-- Resolution quick bar -->
+  <div id="res-bar">
+    <div id="res-bar-label">RES</div>
+    <input id="res-slider" type="range" min="25" max="100" step="5" value="75"
+      oninput="window.setResFromSlider(this.value)"/>
+    <div id="res-pct">75%</div>
+  </div>
+
   <div id="notify"></div>
 
   <div id="action-btns">
@@ -433,6 +461,29 @@ window.showDevicePicker = function(){
   document.getElementById("menu").style.display = "none";
   document.getElementById("device-picker").style.display = "flex";
 };
+
+// ── Resolution slider wiring ────────────────────────────────────────────────────
+window.setResFromSlider = function(val){
+  const v = +val / 100;
+  if(typeof saveSetting === "function"){ saveSetting("renderScale", v); }
+  if(typeof resizeCanvas === "function"){ resizeCanvas(); }
+  const pct = document.getElementById("res-pct");
+  const sl  = document.getElementById("res-slider");
+  if(pct) pct.textContent = val + "%";
+  if(sl)  sl.style.setProperty("--pct", val + "%");
+};
+
+// Sync slider with S.renderScale every frame (in case settings panel changes it)
+setInterval(function(){
+  try{
+    if(typeof S === "undefined") return;
+    const v = Math.round((S.renderScale || 0.75) * 100);
+    const sl = document.getElementById("res-slider");
+    const pct = document.getElementById("res-pct");
+    if(sl && +sl.value !== v){ sl.value = v; sl.style.setProperty("--pct", v+"%"); }
+    if(pct && pct.textContent !== v+"%") pct.textContent = v+"%";
+  }catch(e){}
+}, 500);
 
 // ── Periodic sync ─────────────────────────────────────────────────────────────
 setInterval(function(){
