@@ -99,8 +99,19 @@ document.querySelectorAll(".mode-btn").forEach(btn=>{
 window.startGame=function(){
   const name=($("name-input").value.trim()||"Player");
   socket.emit("joinGame",{name}); socket.emit("setMode",selectedMode);
-  $("menu").style.display="none"; hudEl.style.display="block"; gameActive=true;
-  applyHudScale(); applyMinimapSize();
+  $("menu").style.display="none";
+  hudEl.style.display="block";
+  gameActive=true;
+  resizeCanvas();          // apply current render scale immediately
+  applyHudScale();
+  applyMinimapSize();
+  // Show resolution bar
+  const rb=$("res-bar"); if(rb) rb.style.display="flex";
+  // On mobile, hide PC action btns and show mobile controls
+  if(deviceType==="mobile"){
+    const ab=$("action-btns"); if(ab) ab.style.display="none";
+    const mc=document.getElementById("mobile-controls"); if(mc) mc.style.display="block";
+  }
 };
 
 // ─── Socket events ────────────────────────────────────────────────────────────
