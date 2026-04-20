@@ -466,30 +466,22 @@ canvas{display:block;position:absolute;inset:0}
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 <script>
-// ── Device picker ─────────────────────────────────────────────────────────────
+// ─── Device picker ────────────────────────────────────────────────────────────
 window._deviceType = "pc";
+window._devicePicked = false;
 
 window.pickDevice = function(type){
   window._deviceType = type;
   window._devicePicked = true;
-  try{ localStorage.setItem("roi_device", type); }catch{}
-
-  // Hide device picker, show menu
-  const dp = document.getElementById("device-picker");
-  const menu = document.getElementById("menu");
-  if(dp)   dp.style.display   = "none";
-  if(menu) menu.style.display = "flex";
-
+  try{ localStorage.setItem("roi_device", type); }catch(e){}
+  document.getElementById("device-picker").style.display = "none";
+  document.getElementById("menu").style.display = "flex";
   const lbl = document.getElementById("menu-device-label");
   if(lbl) lbl.textContent = type === "pc" ? "PC" : "Mobile";
   const ctrl = document.getElementById("menu-controls");
   if(ctrl) ctrl.style.display = type === "mobile" ? "none" : "grid";
-
-  // Tell game.js about device type
   if(typeof window.onDevicePicked === "function") window.onDevicePicked(type);
-
-  // Focus name input for faster login
-  setTimeout(()=>{ const ni=document.getElementById("name-input"); if(ni) ni.focus(); }, 100);
+  setTimeout(function(){ const ni=document.getElementById("name-input"); if(ni) ni.focus(); }, 120);
 };
 
 window.showDevicePicker = function(){
@@ -497,70 +489,62 @@ window.showDevicePicker = function(){
   document.getElementById("device-picker").style.display = "flex";
 };
 
-// ── Resolution slider wiring ────────────────────────────────────────────────────
+// ─── Resolution slider ────────────────────────────────────────────────────────
 window.setResFromSlider = function(val){
   const v = +val / 100;
-  if(typeof saveSetting === "function"){ saveSetting("renderScale", v); }
-  if(typeof resizeCanvas === "function"){ resizeCanvas(); }
+  if(typeof saveSetting==="function") saveSetting("renderScale", v);
+  if(typeof resizeCanvas==="function") resizeCanvas();
   const pct = document.getElementById("res-pct");
   const sl  = document.getElementById("res-slider");
   if(pct) pct.textContent = val + "%";
   if(sl)  sl.style.setProperty("--pct", val + "%");
 };
 
-// Sync slider with S.renderScale every frame (in case settings panel changes it)
-setInterval(function(){
-  try{
-    if(typeof S === "undefined") return;
-    const v = Math.round((S.renderScale || 0.75) * 100);
-    const sl = document.getElementById("res-slider");
-    const pct = document.getElementById("res-pct");
-    if(sl && +sl.value !== v){ sl.value = v; sl.style.setProperty("--pct", v+"%"); }
-    if(pct && pct.textContent !== v+"%") pct.textContent = v+"%";
-  }catch(e){}
-}, 500);
-
-// ── Owner console input wiring ───────────────────────────────────────────────
+// ─── Owner console input ──────────────────────────────────────────────────────
 (function(){
   const inp = document.getElementById("owner-input");
   const btn = document.getElementById("owner-send");
   if(!inp||!btn) return;
-  inp.addEventListener("keydown", e=>{
+  inp.addEventListener("keydown", function(e){
     if(e.key==="Enter"){ e.preventDefault(); if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; }
   });
-  btn.addEventListener("click", ()=>{ if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; });
-  // Prevent game keys while typing in console
-  inp.addEventListener("focus", ()=>{ window._ownerTyping=true; });
-  inp.addEventListener("blur",  ()=>{ window._ownerTyping=false; });
+  btn.addEventListener("click", function(){ if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; });
+  inp.addEventListener("focus", function(){ window._ownerTyping=true; });
+  inp.addEventListener("blur",  function(){ window._ownerTyping=false; });
 })();
 
-// ── Periodic sync ─────────────────────────────────────────────────────────────
+// ─── Periodic UI sync ─────────────────────────────────────────────────────────
 setInterval(function(){
   try{
-    // Coins
-    const me = (typeof players !== "undefined" && typeof myId !== "undefined") ? players[myId] : null;
-    const sc = document.getElementById("shop-coins");
+    // Sync shop coins
+    var me = (typeof players!=="undefined" && typeof myId!=="undefined") ? players[myId] : null;
+    var sc = document.getElementById("shop-coins");
     if(sc && me) sc.textContent = me.coins;
 
-    // Weapon slot positioning above minimap
-    const mmWrap = document.getElementById("minimap-wrap");
-    const wSlots = document.getElementById("weapon-slots");
-    if(mmWrap && wSlots){
-      const mmRect = mmWrap.getBoundingClientRect();
-      if(mmRect.height > 0){
-        // slots bottom = window.innerHeight - top of minimap wrap + gap
-        const bottomOfWrap = window.innerHeight - mmRect.top;
-        wSlots.style.bottom = (bottomOfWrap + 8) + "px";
-      }
+    // Sync res slider
+    if(typeof S !== "undefined"){
+      var v = Math.round((S.renderScale||0.75)*100);
+      var sl = document.getElementById("res-slider");
+      var pct = document.getElementById("res-pct");
+      if(sl && +sl.value!==v){ sl.value=v; sl.style.setProperty("--pct",v+"%"); }
+      if(pct && pct.textContent!==v+"%") pct.textContent=v+"%";
     }
 
-    // Mobile crate button
-    if(window._deviceType === "mobile" && typeof crates !== "undefined" && me){
-      const cb = document.getElementById("mob-crate-btn");
-      const near = crates.find(c => !c.open && Math.hypot(me.x - c.x, me.y - c.y) < 80);
+    // Weapon slots position above minimap
+    var mmWrap = document.getElementById("minimap-wrap");
+    var wSlots = document.getElementById("weapon-slots");
+    if(mmWrap && wSlots){
+      var r = mmWrap.getBoundingClientRect();
+      if(r.height>0) wSlots.style.bottom=(window.innerHeight-r.top+8)+"px";
+    }
+
+    // Mobile crate prompt
+    if(window._deviceType==="mobile" && typeof crates!=="undefined" && me){
+      var cb = document.getElementById("mob-crate-btn");
+      var near = crates.find(function(c){ return !c.open && Math.hypot(me.x-c.x,me.y-c.y)<80; });
       if(cb){
         cb.style.display = near ? "block" : "none";
-        if(near) cb.onclick = function(){ if(typeof socket !== "undefined") socket.emit("openCrate", near.id); };
+        if(near) cb.onclick = function(){ if(typeof socket!=="undefined") socket.emit("openCrate",near.id); };
       }
     }
   }catch(e){}
