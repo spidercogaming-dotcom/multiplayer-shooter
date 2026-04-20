@@ -448,12 +448,15 @@ window._deviceType = "pc";
 
 window.pickDevice = function(type){
   window._deviceType = type;
+  // Also write to game.js's module-level variable via onDevicePicked callback
   try{ localStorage.setItem("roi_device", type); }catch{}
   document.getElementById("device-picker").style.display = "none";
   document.getElementById("menu").style.display = "flex";
-  document.getElementById("menu-device-label").textContent = type === "pc" ? "PC" : "Mobile";
+  const lbl = document.getElementById("menu-device-label");
+  if(lbl) lbl.textContent = type === "pc" ? "PC" : "Mobile";
   const ctrl = document.getElementById("menu-controls");
   if(ctrl) ctrl.style.display = type === "mobile" ? "none" : "grid";
+  // Trigger game.js mobile init
   if(typeof window.onDevicePicked === "function") window.onDevicePicked(type);
 };
 
