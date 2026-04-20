@@ -120,6 +120,7 @@ socket.on("init",data=>{
   rarities=data.rarities||{}; rarityOrder=data.rarityOrder||Object.keys(RARITY_COLORS);
   mapSize=data.mapSize||6000; gameMode=data.mode||"ffa";
   shopListings=data.shop||[];
+  if(data.isOwner){ isOwner=true; showOwnerConsole(); }
   buildWeaponSlots(); buildShopUI();
 });
 socket.on("crateSync",d=>{crates=d;});
@@ -188,6 +189,36 @@ socket.on("died",d=>{
 });
 socket.on("respawned",d=>{myPos.x=d.x;myPos.y=d.y;myVel.x=0;myVel.y=0;deathScreen.style.display="none";reloading=false;reloadWrap.style.display="none";});
 socket.on("notify",d=>{const msg=typeof d==="string"?d:d.msg;showNotify(msg,typeof d==="string"?null:d.rarity);});
+
+// ── Owner events ──────────────────────────────────────────────────────────────
+let isOwner=false;
+
+socket.on("ownerChallenge",()=>{
+  // Server says this is an owner name — show password modal
+  const pass=prompt("🔐 Owner verification\nEnter password to continue as this username:");
+  if(pass===null){ location.reload(); return; } // cancelled → reload
+  socket.emit("ownerPassSubmit", pass);
+});
+
+socket.on("ownerAuthOk",()=>{
+  isOwner=true;
+  showOwnerConsole();
+  showNotify("Owner mode active",null);
+});
+
+socket.on("ownerAuthFail",()=>{
+  alert("❌ Wrong password. Returning to menu.");
+  location.reload();
+});
+
+socket.on("kicked",msg=>{
+  alert("You were removed: "+(msg||"Kicked by owner."));
+  location.reload();
+});
+
+socket.on("ownerLog",d=>{
+  appendOwnerLog(d.msg, d.type||"info");
+});
 
 // ─── HUD helpers ──────────────────────────────────────────────────────────────
 function updateHUD(me){
@@ -420,6 +451,7 @@ window.toggleSettings=function(){settingsOpen=!settingsOpen;if(settingsOpen)buil
 // ─── Input ────────────────────────────────────────────────────────────────────
 document.addEventListener("keydown",e=>{
   keys[e.key.toLowerCase()]=true;
+  if(window._ownerTyping) return; // don't process game keys while in console
   if(!gameActive)return;
   if(e.key==="Tab"){e.preventDefault();lbEl.style.display="block";return;}
   if(e.key==="Escape"){lbEl.style.display="none";if(shopOpen)toggleShop();if(settingsOpen)toggleSettings();return;}
@@ -447,7 +479,8 @@ document.addEventListener("keydown",e=>{
     showNotify("Resolution: "+Math.round(v*100)+"%",null);
   }
 });
-document.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;if(e.key==="Tab")lbEl.style.display="none";});
+document.addEventListener("keyup",e=>{
+  keys[e.key.toLowerCase()]=false;if(e.key==="Tab")lbEl.style.display="none";});
 canvas.addEventListener("mousemove",e=>{
   const sc=S.renderScale||0.75;
   mx=e.clientX*sc; my=e.clientY*sc;
@@ -1009,6 +1042,47 @@ function initMobileControls(){
     socket.emit("switchWeapon",newW);
   });
 }
+
+// ─── Owner console ────────────────────────────────────────────────────────────
+function showOwnerConsole(){
+  const el=document.getElementById("owner-console");
+  if(el){ el.style.display="flex"; }
+}
+
+function appendOwnerLog(msg, type){
+  const log=document.getElementById("owner-log");
+  if(!log) return;
+  const colors={info:"#60a5fa",success:"#4ade80",error:"#ef4444",warn:"#facc15"};
+  const col=colors[type]||"#f1f5f9";
+  const div=document.createElement("div");
+  div.style.cssText=`color:${col};font-size:12px;line-height:1.5;white-space:pre-wrap;margin-bottom:2px`;
+  div.textContent="> "+msg;
+  log.appendChild(div);
+  log.scrollTop=log.scrollHeight;
+}
+
+function ownerExec(input){
+  if(!isOwner||!input.trim()) return;
+  appendOwnerLog(input, "warn");
+  // Parse: cmd(arg1, arg2, ...) or just cmd()
+  const match=input.match(/^(\w+)\((.*)\)\s*$/);
+  if(!match){ appendOwnerLog("Format: command('arg1', 'arg2')", "error"); return; }
+  const cmd=match[1].toLowerCase();
+  // Parse args — handle quoted strings and numbers
+  const rawArgs=match[2].trim();
+  const args=rawArgs?rawArgs.split(",").map(a=>{
+    const t=a.trim().replace(/^['"]|['"]$/g,"");
+    return isNaN(t)?t:+t;
+  }):[];
+  socket.emit("ownerCmd",{cmd,args});
+}
+
+// Expose as global so browser console also works
+window.owner={};
+["help","players","kick","ban","unban","give","coins","hp","god","killall","broadcast","setmode","storm","resetzone","stats"]
+  .forEach(cmd=>{
+    window.owner[cmd]=(...args)=>ownerExec(`${cmd}(${args.map(a=>JSON.stringify(a)).join(",")})`);
+  });
 
 applyAllSettings();
 _rafId=requestAnimationFrame(loop);
