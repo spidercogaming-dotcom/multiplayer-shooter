@@ -440,28 +440,6 @@ canvas{display:block;position:absolute;inset:0}
   <div id="settings-body"></div>
 </div>
 
-<!-- OWNER CONSOLE -->
-<div id="owner-console">
-  <div id="owner-console-header">
-    <div id="owner-console-title">⚡ OWNER CONSOLE</div>
-    <div id="owner-console-btns">
-      <button class="oc-hdr-btn" onclick="document.getElementById('owner-console').style.display='none';document.getElementById('owner-console-tab').style.display='block'">— MIN</button>
-      <button class="oc-hdr-btn" onclick="ownerExec('help()')">HELP</button>
-      <button class="oc-hdr-btn" onclick="ownerExec('players()')">WHO</button>
-      <button class="oc-hdr-btn" onclick="ownerExec('stats()')">STATS</button>
-    </div>
-  </div>
-  <div id="owner-log">
-    <div style="color:#facc15;font-size:12px;margin-bottom:4px">⚡ Owner console ready. Type help() for commands.</div>
-  </div>
-  <div id="owner-input-row">
-    <input id="owner-input" placeholder="e.g. kick('player1') or help()" autocomplete="off" autocorrect="off" spellcheck="false"/>
-    <button id="owner-send">RUN</button>
-  </div>
-</div>
-
-<!-- minimised tab -->
-<div id="owner-console-tab" onclick="document.getElementById('owner-console').style.display='flex';this.style.display='none'">⚡ CONSOLE</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
@@ -500,18 +478,7 @@ window.setResFromSlider = function(val){
   if(sl)  sl.style.setProperty("--pct", val + "%");
 };
 
-// ─── Owner console input ──────────────────────────────────────────────────────
-(function(){
-  const inp = document.getElementById("owner-input");
-  const btn = document.getElementById("owner-send");
-  if(!inp||!btn) return;
-  inp.addEventListener("keydown", function(e){
-    if(e.key==="Enter"){ e.preventDefault(); if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; }
-  });
-  btn.addEventListener("click", function(){ if(typeof ownerExec==="function") ownerExec(inp.value); inp.value=""; });
-  inp.addEventListener("focus", function(){ window._ownerTyping=true; });
-  inp.addEventListener("blur",  function(){ window._ownerTyping=false; });
-})();
+
 
 // ─── Periodic UI sync ─────────────────────────────────────────────────────────
 setInterval(function(){
