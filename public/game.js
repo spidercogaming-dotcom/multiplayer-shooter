@@ -38,6 +38,8 @@ const ctx    = canvas.getContext("2d");
 const mmCvs  = document.getElementById("minimap");
 const mctx   = mmCvs.getContext("2d");
 
+let mx=Math.round(window.innerWidth/2), my=Math.round(window.innerHeight/2);
+
 function resizeCanvas(){
   const sc=Math.max(0.25,Math.min(1.0,S.renderScale||0.75));
   const W=Math.round(window.innerWidth*sc), H=Math.round(window.innerHeight*sc);
@@ -49,8 +51,6 @@ function resizeCanvas(){
   const imgSmooth = sc >= 0.9;
   ctx.imageSmoothingEnabled = imgSmooth;
   canvas.style.imageRendering = imgSmooth ? "auto" : "pixelated";
-  // Reset mx/my to canvas centre on resize
-  mx = canvas.width/2; my = canvas.height/2;
 }
 resizeCanvas();
 window.addEventListener("resize",resizeCanvas);
@@ -62,13 +62,12 @@ let gameMode="ffa",gameActive=false,selectedMode="ffa";
 let myPos={x:3000,y:3000},myAngle=0,myVel={x:0,y:0};
 let camX=0,camY=0,shakeAmt=0;
 const keys={};
-let mx=800,my=450,mouseHeld=false,scoped=false,lastInputSent=0;
+let mouseHeld=false,scoped=false,lastInputSent=0;
 let currentWeapon="pistol_common",currentAmmo=12,reloading=false,reloadStart=0,reloadDuration=0,lastFire=0;
 let particles=[],damageNums=[],prevPlayers={},lerpT=0,lastStateAt=0,hitFlash=0,inZone=true,_lastInvKey="";
 let lastFrame=performance.now(),fps=0,fpsAcc=0,fpsN=0,_mmFrame=0,_rafId=null;
 let shopListings=[],shopOpen=false,settingsOpen=false;
 let deviceType="pc"; // set by device picker
-window.onDevicePicked=function(type){ deviceType=type; initMobileControls(); };
 
 
 const LERP_DUR=80, FRICTION=0.80, BASE_SPEED=260;
@@ -98,20 +97,14 @@ document.querySelectorAll(".mode-btn").forEach(btn=>{
 
 window.startGame=function(){
   const name=($("name-input").value.trim()||"Player");
-  socket.emit("joinGame",{name}); socket.emit("setMode",selectedMode);
+  socket.emit("joinGame",{name});
+  socket.emit("setMode",selectedMode);
   $("menu").style.display="none";
   hudEl.style.display="block";
   gameActive=true;
-  resizeCanvas();          // apply current render scale immediately
+  resizeCanvas();
   applyHudScale();
   applyMinimapSize();
-  // Show resolution bar
-  const rb=$("res-bar"); if(rb) rb.style.display="flex";
-  // On mobile, hide PC action btns and show mobile controls
-  if(deviceType==="mobile"){
-    const ab=$("action-btns"); if(ab) ab.style.display="none";
-    const mc=document.getElementById("mobile-controls"); if(mc) mc.style.display="block";
-  }
 };
 
 // ─── Socket events ────────────────────────────────────────────────────────────
@@ -883,137 +876,6 @@ function loop(now){
   const me=players[myId];
   if(me?.inventory){const k=me.inventory.join(",");if(k!==_lastInvKey){_lastInvKey=k;buildWeaponSlots();updatePassiveHud();}}
 }
-
-
-// ─── Mobile touch controls ────────────────────────────────────────────────────
-let joystickActive=false, joystickId=-1;
-let joystickOriginX=0, joystickOriginY=0;
-let touchDx=0, touchDy=0;
-let aimTouchId=-1, aimLastX=0, aimLastY=0;
-let mobileShooting=false, mobileShootInterval=null;
-
-function initMobileControls(){
-  const mc=document.getElementById("mobile-controls");
-  const ab=document.getElementById("action-btns");
-  if(!mc) return;
-
-  if(deviceType!=="mobile"){
-    mc.style.display="none";
-    if(ab) ab.style.display="flex";
-    canvas.style.cursor="crosshair";
-    return;
-  }
-
-  mc.style.display="block";
-  if(ab) ab.style.display="none"; // mobile has its own
-  canvas.style.cursor="none"; // no cursor on mobile
-
-  const jZone=document.getElementById("joystick-zone");
-  const jThumb=document.getElementById("joystick-thumb");
-  const aimZone=document.getElementById("aim-zone");
-  const fireBtn=document.getElementById("fire-btn");
-  const reloadBtn=document.getElementById("reload-btn");
-  const scopeBtn=document.getElementById("mob-scope-btn");
-  const weapPrev=document.getElementById("mob-weap-prev");
-  const weapNext=document.getElementById("mob-weap-next");
-
-  // ── Joystick ──────────────────────────────────────────────────────────────
-  function jStart(e){
-    e.preventDefault();
-    const t=e.changedTouches[0];
-    joystickActive=true; joystickId=t.identifier;
-    joystickOriginX=t.clientX; joystickOriginY=t.clientY;
-    touchDx=0; touchDy=0;
-  }
-  function jMove(e){
-    e.preventDefault();
-    for(let i=0;i<e.changedTouches.length;i++){
-      const t=e.changedTouches[i];
-      if(t.identifier!==joystickId) continue;
-      const dx=t.clientX-joystickOriginX, dy=t.clientY-joystickOriginY;
-      const len=Math.sqrt(dx*dx+dy*dy)||1;
-      const clamped=Math.min(len,55);
-      touchDx=(dx/len)*(clamped/55);
-      touchDy=(dy/len)*(clamped/55);
-      // Move thumb visual
-      const tx=touchDx*55, ty=touchDy*55;
-      if(jThumb){ jThumb.style.transform=`translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)`; }
-    }
-  }
-  function jEnd(e){
-    for(let i=0;i<e.changedTouches.length;i++){
-      if(e.changedTouches[i].identifier===joystickId){
-        joystickActive=false; joystickId=-1; touchDx=0; touchDy=0;
-        if(jThumb) jThumb.style.transform="translate(-50%,-50%)";
-      }
-    }
-  }
-  if(jZone){ jZone.addEventListener("touchstart",jStart,{passive:false}); jZone.addEventListener("touchmove",jMove,{passive:false}); jZone.addEventListener("touchend",jEnd,{passive:false}); jZone.addEventListener("touchcancel",jEnd,{passive:false}); }
-
-  // ── Aim zone (pan to aim) ─────────────────────────────────────────────────
-  function aimStart(e){
-    e.preventDefault();
-    for(let i=0;i<e.changedTouches.length;i++){
-      const t=e.changedTouches[i];
-      if(aimTouchId===-1&&t.clientX>window.innerWidth*0.4){
-        aimTouchId=t.identifier; aimLastX=t.clientX; aimLastY=t.clientY;
-      }
-    }
-  }
-  function aimMove(e){
-    e.preventDefault();
-    for(let i=0;i<e.changedTouches.length;i++){
-      const t=e.changedTouches[i];
-      if(t.identifier!==aimTouchId) continue;
-      const sens=(S.mouseSensitivity||1)*1.8;
-      mx+=( t.clientX-aimLastX)*sens;
-      my+=( t.clientY-aimLastY)*sens;
-      mx=Math.max(0,Math.min(canvas.width,mx));
-      my=Math.max(0,Math.min(canvas.height,my));
-      aimLastX=t.clientX; aimLastY=t.clientY;
-    }
-  }
-  function aimEnd(e){
-    for(let i=0;i<e.changedTouches.length;i++){
-      if(e.changedTouches[i].identifier===aimTouchId) aimTouchId=-1;
-    }
-  }
-  if(aimZone){ aimZone.addEventListener("touchstart",aimStart,{passive:false}); aimZone.addEventListener("touchmove",aimMove,{passive:false}); aimZone.addEventListener("touchend",aimEnd,{passive:false}); aimZone.addEventListener("touchcancel",aimEnd,{passive:false}); }
-
-  // ── Fire button ───────────────────────────────────────────────────────────
-  if(fireBtn){
-    fireBtn.addEventListener("touchstart",e=>{
-      e.preventDefault(); fireBtn.classList.add("active");
-      doShoot();
-      mobileShootInterval=setInterval(()=>{ const w=weapons[currentWeapon]; if(w?.auto) doShoot(); },50);
-    });
-    fireBtn.addEventListener("touchend",e=>{ e.preventDefault(); fireBtn.classList.remove("active"); clearInterval(mobileShootInterval); });
-    fireBtn.addEventListener("touchcancel",e=>{ fireBtn.classList.remove("active"); clearInterval(mobileShootInterval); });
-  }
-
-  // ── Reload ────────────────────────────────────────────────────────────────
-  if(reloadBtn) reloadBtn.addEventListener("touchstart",e=>{ e.preventDefault(); socket.emit("reload"); });
-
-  // ── Scope toggle ──────────────────────────────────────────────────────────
-  if(scopeBtn) scopeBtn.addEventListener("touchstart",e=>{ e.preventDefault(); scoped=!scoped; });
-
-  // ── Weapon cycle ──────────────────────────────────────────────────────────
-  if(weapPrev) weapPrev.addEventListener("touchstart",e=>{
-    e.preventDefault();
-    const me=players[myId]; if(!me?.inventory) return;
-    const idx=me.inventory.indexOf(currentWeapon);
-    const newW=me.inventory[(idx-1+me.inventory.length)%me.inventory.length];
-    socket.emit("switchWeapon",newW);
-  });
-  if(weapNext) weapNext.addEventListener("touchstart",e=>{
-    e.preventDefault();
-    const me=players[myId]; if(!me?.inventory) return;
-    const idx=me.inventory.indexOf(currentWeapon);
-    const newW=me.inventory[(idx+1)%me.inventory.length];
-    socket.emit("switchWeapon",newW);
-  });
-}
-
 
 
 applyAllSettings();
