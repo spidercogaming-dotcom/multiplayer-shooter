@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
 <title>Rise of Ikons PRO</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -14,42 +12,26 @@
   --text:#f1f5f9;--muted:#64748b;--mono:'Courier New',monospace;
 }
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono);touch-action:none}
-canvas{display:block;position:absolute;inset:0}
-#game{cursor:crosshair}
-
-/* ── DEVICE PICKER ── */
-#device-picker{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:radial-gradient(ellipse at 50% 40%,#1e293b 0%,#0a0f1e 70%);z-index:200}
-#dp-logo{font-size:clamp(22px,5vw,46px);font-weight:900;letter-spacing:6px;text-transform:uppercase;color:var(--text);text-shadow:0 0 40px rgba(59,130,246,.55)}
-#dp-sub{font-size:11px;color:var(--muted);letter-spacing:4px;text-transform:uppercase}
-#dp-q{font-size:15px;color:var(--text);letter-spacing:1px}
-#dp-cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
-.dp-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:28px 36px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;transition:all .2s;min-width:140px}
-.dp-card:hover,.dp-card:active{background:rgba(59,130,246,.12);border-color:var(--accent);transform:translateY(-3px)}
-.dp-card-label{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-.dp-card-sub{font-size:10px;color:var(--muted)}
+canvas{display:block;cursor:crosshair;position:absolute;inset:0}
 
 /* ── MENU ── */
-#menu{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% 40%,#1e293b 0%,#0a0f1e 70%);z-index:100}
-#menu-logo{font-size:clamp(24px,5.5vw,50px);font-weight:900;letter-spacing:6px;text-transform:uppercase;color:var(--text);text-shadow:0 0 40px rgba(59,130,246,.55)}
+#menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:radial-gradient(ellipse at 50% 40%,#1e293b 0%,#0a0f1e 70%);z-index:100}
+#menu-logo{font-size:clamp(24px,5.5vw,52px);font-weight:900;letter-spacing:6px;text-transform:uppercase;color:var(--text);text-shadow:0 0 40px rgba(59,130,246,.55)}
 #menu-sub{font-size:11px;color:var(--muted);letter-spacing:4px;text-transform:uppercase}
-#menu-form{display:flex;flex-direction:column;align-items:center;gap:12px;width:min(280px,90vw)}
+#menu-form{display:flex;flex-direction:column;align-items:center;gap:12px;width:min(280px,88vw)}
 #name-input{width:100%;padding:12px 16px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;text-align:center;outline:none;transition:border-color .2s}
 #name-input:focus{border-color:var(--accent)}
 #name-input::placeholder{color:var(--muted)}
-.menu-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all .15s}
+.menu-btn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all .15s}
 .menu-btn:hover{background:#2563eb}.menu-btn:active{transform:scale(.97)}
 #mode-select{display:flex;gap:8px}
 .mode-btn{padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:all .15s}
 .mode-btn.active,.mode-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
-#menu-controls{display:grid;grid-template-columns:1fr 1fr;gap:5px 22px;font-size:11px;color:var(--muted);text-align:left;margin-top:4px}
+#menu-controls{display:grid;grid-template-columns:1fr 1fr;gap:5px 22px;font-size:11px;color:var(--muted);text-align:left}
 #menu-controls span{color:var(--text);font-weight:700}
-#menu-device-badge{font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:5px 14px;display:flex;align-items:center;gap:8px}
-#menu-device-badge b{color:var(--accent)}
-.change-device-btn{background:transparent;border:none;color:var(--accent);font-family:var(--mono);font-size:10px;cursor:pointer;text-decoration:underline;padding:0}
 
 /* ── HUD ── */
 #hud{position:absolute;inset:0;pointer-events:none;z-index:50;display:none}
-
 #bars{position:absolute;top:16px;left:16px;display:flex;flex-direction:column;gap:5px;width:185px}
 .bar-row{display:flex;align-items:center;gap:8px}
 .bar-icon{font-size:11px;width:13px;text-align:center;color:var(--muted)}
@@ -58,18 +40,14 @@ canvas{display:block;position:absolute;inset:0}
 #hp-fill{background:#22c55e}
 #sh-fill{background:#3b82f6}
 .bar-val{font-size:10px;color:var(--muted);min-width:26px;text-align:right}
-
 #passive-hud{position:absolute;top:52px;left:16px;display:none;flex-direction:column;gap:2px;background:rgba(0,0,0,.52);border:1px solid rgba(255,255,255,.08);border-radius:5px;padding:5px 10px;font-size:10px;letter-spacing:.8px;pointer-events:none}
 .passive-desc{color:var(--muted);font-size:9px}
-
 #fps-counter,#ping-counter{position:absolute;font-size:10px;color:var(--muted);pointer-events:none;background:rgba(0,0,0,.35);border-radius:3px;padding:2px 6px}
 #fps-counter{top:52px;left:16px}
 #ping-counter{top:68px;left:16px}
-
 #stats{position:absolute;top:16px;right:16px;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .stat-pill{background:var(--sf);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;display:flex;gap:5px;align-items:center}
 .stat-pill b{color:var(--text)}.stat-pill span{color:var(--muted)}
-
 #killfeed{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;min-width:260px;pointer-events:none;z-index:5}
 .kf-entry{background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:4px 10px;font-size:11px;animation:kfin .2s ease,kfout .4s ease 2.1s forwards;white-space:nowrap}
 @keyframes kfin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
@@ -77,27 +55,14 @@ canvas{display:block;position:absolute;inset:0}
 .kf-kill{color:var(--gold)}.kf-victim{color:var(--danger)}.kf-weapon{color:var(--muted);font-size:9px}
 
 /* ── MINIMAP bottom-left ── */
-#minimap-wrap{
-  position:absolute;
-  bottom:16px;
-  left:16px;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap:4px;
-  pointer-events:none;
-  z-index:10;
-}
+#minimap-wrap{position:absolute;bottom:16px;left:16px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;z-index:10}
 #minimap{border-radius:8px;border:1px solid rgba(255,255,255,.15);display:block;box-shadow:0 4px 20px rgba(0,0,0,.7)}
 #minimap-label{font-size:9px;color:var(--muted);letter-spacing:1.5px;padding-left:2px}
-
-/* weapon slots sit just above minimap — bottom set by JS */
 #weapon-slots{position:absolute;left:16px;bottom:200px;display:flex;flex-direction:column;gap:4px;z-index:10}
 .wslot{background:var(--sf);border:1px solid var(--border);border-radius:5px;padding:5px 10px;font-size:10px;color:var(--muted);min-width:112px;display:flex;align-items:center;gap:5px;cursor:pointer;transition:all .1s;pointer-events:all}
 .wslot.active{color:var(--text);background:rgba(59,130,246,.1)}
 .wslot-key{color:var(--accent);font-weight:700;font-size:9px;min-width:10px}
 .wslot-rarity{margin-left:auto;font-size:7px}
-
 #ammo-hud{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:var(--sf);border:1px solid var(--border);border-radius:8px;padding:8px 22px;pointer-events:none}
 #weapon-name{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;min-width:80px}
 #ammo-count{font-size:22px;font-weight:900;color:var(--text);min-width:44px;text-align:right}
@@ -105,31 +70,9 @@ canvas{display:block;position:absolute;inset:0}
 #ammo-reserve{font-size:14px;color:var(--muted)}
 #reload-bar-wrap{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);width:160px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;display:none}
 #reload-bar-fill{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width .05s linear}
-
 #zone-warn{position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.38);border-radius:8px;padding:10px 24px;font-size:14px;color:var(--danger);font-weight:700;letter-spacing:2px;display:none;animation:pulse 1s infinite;pointer-events:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-
-#notify{position:absolute;bottom:86px;left:50%;transform:translateX(-50%) translateY(0);font-size:13px;font-weight:700;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s;text-align:center;white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.9)}
-
-/* Resolution quick bar — top centre, always visible */
-#res-bar{
-  position:absolute;top:16px;left:50%;transform:translateX(-50%);
-  display:none; /* shown only in game */
-  align-items:center;gap:8px;
-  background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.08);
-  border-radius:20px;padding:4px 14px;pointer-events:all;z-index:55;
-}
-#res-bar-label{font-size:10px;color:#64748b;letter-spacing:1px}
-#res-slider{
-  -webkit-appearance:none;appearance:none;
-  width:90px;height:3px;border-radius:2px;
-  background:linear-gradient(to right,#3b82f6 var(--pct,75%),rgba(255,255,255,.15) var(--pct,75%));
-  outline:none;cursor:pointer;
-}
-#res-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#3b82f6;cursor:pointer;border:2px solid #1e3a8a}
-#res-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#3b82f6;cursor:pointer;border:2px solid #1e3a8a}
-#res-pct{font-size:11px;font-weight:700;color:#f1f5f9;min-width:36px;text-align:right}
-
+#notify{position:absolute;bottom:86px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.9)}
 #action-btns{position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:6px;pointer-events:all;z-index:10}
 .action-btn{background:var(--sf);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-family:var(--mono);font-size:11px;color:var(--gold);cursor:pointer;letter-spacing:1px;transition:background .1s}
 .action-btn:hover{background:rgba(250,204,21,.1)}
@@ -147,22 +90,19 @@ canvas{display:block;position:absolute;inset:0}
 #leaderboard h3{font-size:12px;letter-spacing:3px;color:var(--muted);margin-bottom:12px;text-transform:uppercase}
 .lb-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .lb-row:last-child{border:none}
-.lb-rank{color:var(--muted);min-width:20px}
-.lb-name{flex:1;padding-left:8px}
-.lb-kills{color:var(--gold);min-width:40px;text-align:right}
-.lb-score{color:var(--accent);min-width:50px;text-align:right}
+.lb-rank{color:var(--muted);min-width:20px}.lb-name{flex:1;padding-left:8px}
+.lb-kills{color:var(--gold);min-width:40px;text-align:right}.lb-score{color:var(--accent);min-width:50px;text-align:right}
 
 /* ── SHOP ── */
 #shop{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--sf);border:1px solid var(--border);border-radius:12px;padding:20px;width:min(700px,92vw);max-height:80vh;overflow-y:auto;display:none;flex-direction:column;gap:14px;z-index:95;backdrop-filter:blur(14px);pointer-events:all}
 #shop-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 #shop-header h2{font-size:15px;letter-spacing:3px;color:var(--text);text-transform:uppercase}
-.shop-coins-display{font-size:12px;color:var(--muted)}
-.shop-coins-display b{color:var(--gold)}
+.shop-coins-display{font-size:12px;color:var(--muted)}.shop-coins-display b{color:var(--gold)}
 .shop-close-btn{background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:6px 14px;font-family:var(--mono);font-size:11px;cursor:pointer}
 .shop-close-btn:hover{color:var(--text)}
 #shop-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .shop-item{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;transition:background .15s}
-.shop-item:hover,.shop-item:active{background:rgba(255,255,255,.07)}
+.shop-item:hover{background:rgba(255,255,255,.07)}
 .shop-item-name{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;line-height:1.3}
 .shop-item-passive{font-size:9px;color:var(--muted);line-height:1.4}
 .shop-item-cost{font-size:13px;font-weight:700;margin-top:auto;display:flex;align-items:center;gap:4px}
@@ -186,7 +126,6 @@ canvas{display:block;position:absolute;inset:0}
 .settings-close-btn{background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:6px 14px;font-family:var(--mono);font-size:11px;cursor:pointer}
 .settings-close-btn:hover{color:var(--text)}
 #settings-body{padding:12px 20px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:0;flex:1}
-.settings-section{font-size:9px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;padding:14px 0 6px;border-bottom:1px solid rgba(59,130,246,.15);margin-bottom:4px}
 .settings-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px}
 .settings-row:last-child{border:none}
 .settings-label{font-size:11px;color:var(--text);flex:1}
@@ -204,102 +143,10 @@ canvas{display:block;position:absolute;inset:0}
 .settings-reset:hover{background:rgba(239,68,68,.08)}
 #settings-body::-webkit-scrollbar{width:4px}
 #settings-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
-
-/* ═══ MOBILE TOUCH CONTROLS ═══════════════════════════════════════════════ */
-#mobile-controls{position:absolute;inset:0;pointer-events:none;z-index:40;display:none}
-
-/* Joystick */
-#joystick-zone{position:absolute;bottom:24px;left:24px;width:150px;height:150px;pointer-events:all}
-#joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.14)}
-#joystick-thumb{position:absolute;width:52px;height:52px;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:50%;background:rgba(59,130,246,.45);border:2px solid rgba(59,130,246,.8)}
-
-/* Shoot button — bottom right */
-#fire-btn{
-  position:absolute;bottom:24px;right:28px;
-  width:80px;height:80px;border-radius:50%;
-  background:rgba(239,68,68,.3);border:3px solid rgba(239,68,68,.65);
-  display:flex;align-items:center;justify-content:center;font-size:24px;
-  pointer-events:all;user-select:none;transition:background .08s;
-}
-#fire-btn.active{background:rgba(239,68,68,.6)}
-
-/* Reload button */
-#reload-btn{
-  position:absolute;bottom:32px;right:124px;
-  width:54px;height:54px;border-radius:50%;
-  background:rgba(250,204,21,.18);border:2px solid rgba(250,204,21,.45);
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  pointer-events:all;user-select:none;
-}
-
-/* Weapon cycle prev/next */
-#mob-weap-prev,#mob-weap-next{
-  position:absolute;bottom:200px;
-  width:46px;height:46px;border-radius:50%;
-  background:var(--sf);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;pointer-events:all;color:var(--text);user-select:none;
-}
-#mob-weap-prev{left:190px}
-#mob-weap-next{left:246px}
-
-/* Aim zone (right 55% of screen for look/aim) */
-#aim-zone{position:absolute;right:0;top:0;bottom:0;width:55%;pointer-events:all}
-
-/* Scope toggle button */
-#mob-scope-btn{
-  position:absolute;top:120px;right:28px;
-  width:50px;height:50px;border-radius:50%;
-  background:rgba(161,139,250,.18);border:2px solid rgba(161,139,250,.45);
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  pointer-events:all;user-select:none;
-}
-
-/* Crate open prompt */
-#mob-crate-btn{
-  position:absolute;bottom:220px;right:28px;
-  background:rgba(161,139,250,.22);border:2px solid rgba(161,139,250,.55);
-  border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:11px;
-  color:#a78bfa;pointer-events:all;display:none;letter-spacing:1px;
-}
-
-/* Mobile top action row */
-#mob-top-btns{position:absolute;top:100px;right:8px;display:flex;flex-direction:column;gap:8px;pointer-events:all}
-.mob-action-btn{background:var(--sf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--gold);letter-spacing:.5px}
 </style>
 </head>
 <body>
 
-<!-- DEVICE PICKER -->
-<div id="device-picker">
-  <div id="dp-logo">Rise of Ikons</div>
-  <div id="dp-sub">PRO Edition</div>
-  <div id="dp-q">How are you playing?</div>
-  <div id="dp-cards">
-    <div class="dp-card" onclick="pickDevice('pc')">
-      <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
-        <rect x="5" y="9" width="44" height="28" rx="3" stroke="#60a5fa" stroke-width="2.5"/>
-        <rect x="10" y="14" width="34" height="18" rx="1" fill="rgba(96,165,250,.12)"/>
-        <path d="M19 37l-2 8h20l-2-8" stroke="#60a5fa" stroke-width="2"/>
-        <path d="M15 45h24" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-      <div class="dp-card-label">PC</div>
-      <div class="dp-card-sub">Keyboard &amp; Mouse</div>
-    </div>
-    <div class="dp-card" onclick="pickDevice('mobile')">
-      <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
-        <rect x="15" y="4" width="24" height="46" rx="5" stroke="#4ade80" stroke-width="2.5"/>
-        <circle cx="27" cy="44" r="2.5" fill="#4ade80" opacity=".55"/>
-        <rect x="21" y="9" width="12" height="2" rx="1" fill="#4ade80" opacity=".4"/>
-        <rect x="19" y="15" width="16" height="20" rx="1" fill="rgba(74,222,128,.1)"/>
-      </svg>
-      <div class="dp-card-label" style="color:#4ade80">Mobile</div>
-      <div class="dp-card-sub">Touch Controls</div>
-    </div>
-  </div>
-</div>
-
-<!-- MENU -->
 <div id="menu">
   <div id="menu-logo">Rise of Ikons</div>
   <div id="menu-sub">PRO Edition</div>
@@ -310,11 +157,7 @@ canvas{display:block;position:absolute;inset:0}
       <button class="mode-btn" data-mode="team">Teams</button>
       <button class="mode-btn" data-mode="swords">Swords</button>
     </div>
-    <button class="menu-btn" onclick="startGame()">▶ PLAY</button>
-  </div>
-  <div id="menu-device-badge">
-    Playing on <b id="menu-device-label">PC</b>
-    <button class="change-device-btn" onclick="showDevicePicker()">change</button>
+    <button class="menu-btn" onclick="if(typeof startGame==='function')startGame()">▶ PLAY</button>
   </div>
   <div id="menu-controls">
     <div><span>WASD</span> Move</div>
@@ -325,16 +168,13 @@ canvas{display:block;position:absolute;inset:0}
     <div><span>F</span> Open Crate</div>
     <div><span>B</span> Shop</div>
     <div><span>P</span> Settings</div>
-    <div><span>-/+</span> Resolution</div>
     <div><span>Tab</span> Scores</div>
     <div><span>M</span> Minimap</div>
   </div>
 </div>
 
-<!-- CANVAS -->
 <canvas id="game"></canvas>
 
-<!-- HUD -->
 <div id="hud">
   <div id="bars">
     <div class="bar-row"><div class="bar-icon">♥</div><div class="bar-outer"><div class="bar-fill" id="hp-fill" style="width:100%"></div></div><div class="bar-val" id="hp-val">100</div></div>
@@ -350,53 +190,23 @@ canvas{display:block;position:absolute;inset:0}
   </div>
   <div id="killfeed"></div>
   <div id="zone-warn">⚠ GET IN THE ZONE</div>
-
-  <!-- MINIMAP: canvas on top, label below, both inside the wrap -->
   <div id="minimap-wrap">
     <canvas id="minimap" width="160" height="160"></canvas>
     <div id="minimap-label">MAP · M</div>
   </div>
-
   <div id="weapon-slots"></div>
-
   <div id="ammo-hud">
     <div id="weapon-name" style="color:#facc15">PISTOL</div>
     <div id="ammo-count">12</div><div id="ammo-sep">/</div><div id="ammo-reserve">90</div>
   </div>
   <div id="reload-bar-wrap"><div id="reload-bar-fill"></div></div>
-  <!-- Resolution quick bar -->
-  <div id="res-bar">
-    <div id="res-bar-label">RES</div>
-    <input id="res-slider" type="range" min="25" max="100" step="5" value="75"
-      oninput="window.setResFromSlider(this.value)"/>
-    <div id="res-pct">75%</div>
-  </div>
-
   <div id="notify"></div>
-
   <div id="action-btns">
     <button class="action-btn" onclick="toggleShop()">⬡ SHOP [B]</button>
     <button class="action-btn blue" onclick="toggleSettings()">⚙ [P]</button>
   </div>
 </div>
 
-<!-- MOBILE CONTROLS -->
-<div id="mobile-controls">
-  <div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-thumb"></div></div>
-  <div id="aim-zone"></div>
-  <div id="fire-btn">🔫</div>
-  <div id="reload-btn">↺</div>
-  <div id="mob-weap-prev">‹</div>
-  <div id="mob-weap-next">›</div>
-  <div id="mob-scope-btn">🔭</div>
-  <div id="mob-crate-btn">📦 OPEN</div>
-  <div id="mob-top-btns">
-    <button class="mob-action-btn" onclick="toggleShop()">⬡ SHOP</button>
-    <button class="mob-action-btn" style="color:#60a5fa" onclick="toggleSettings()">⚙ SET</button>
-  </div>
-</div>
-
-<!-- DEATH -->
 <div id="death-screen">
   <h2>YOU DIED</h2>
   <p id="death-by">Killed by —</p>
@@ -404,10 +214,8 @@ canvas{display:block;position:absolute;inset:0}
   <p style="font-size:11px;color:var(--muted)">Respawning…</p>
 </div>
 
-<!-- LEADERBOARD -->
 <div id="leaderboard"><h3>Leaderboard</h3><div id="lb-rows"></div></div>
 
-<!-- SHOP -->
 <div id="shop">
   <div id="shop-header">
     <h2>⬡ Shop</h2>
@@ -423,7 +231,6 @@ canvas{display:block;position:absolute;inset:0}
   </div>
 </div>
 
-<!-- SETTINGS -->
 <div id="settings-panel">
   <div id="settings-header">
     <h2>⚙ Settings</h2>
@@ -440,79 +247,19 @@ canvas{display:block;position:absolute;inset:0}
   <div id="settings-body"></div>
 </div>
 
-
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 <script>
-// ─── Device picker ────────────────────────────────────────────────────────────
-window._deviceType = "pc";
-window._devicePicked = false;
-
-window.pickDevice = function(type){
-  window._deviceType = type;
-  window._devicePicked = true;
-  try{ localStorage.setItem("roi_device", type); }catch(e){}
-  document.getElementById("device-picker").style.display = "none";
-  document.getElementById("menu").style.display = "flex";
-  const lbl = document.getElementById("menu-device-label");
-  if(lbl) lbl.textContent = type === "pc" ? "PC" : "Mobile";
-  const ctrl = document.getElementById("menu-controls");
-  if(ctrl) ctrl.style.display = type === "mobile" ? "none" : "grid";
-  if(typeof window.onDevicePicked === "function") window.onDevicePicked(type);
-  setTimeout(function(){ const ni=document.getElementById("name-input"); if(ni) ni.focus(); }, 120);
-};
-
-window.showDevicePicker = function(){
-  document.getElementById("menu").style.display = "none";
-  document.getElementById("device-picker").style.display = "flex";
-};
-
-// ─── Resolution slider ────────────────────────────────────────────────────────
-window.setResFromSlider = function(val){
-  const v = +val / 100;
-  if(typeof saveSetting==="function") saveSetting("renderScale", v);
-  if(typeof resizeCanvas==="function") resizeCanvas();
-  const pct = document.getElementById("res-pct");
-  const sl  = document.getElementById("res-slider");
-  if(pct) pct.textContent = val + "%";
-  if(sl)  sl.style.setProperty("--pct", val + "%");
-};
-
-
-
-// ─── Periodic UI sync ─────────────────────────────────────────────────────────
 setInterval(function(){
   try{
-    // Sync shop coins
-    var me = (typeof players!=="undefined" && typeof myId!=="undefined") ? players[myId] : null;
+    var me = (typeof players!=="undefined"&&typeof myId!=="undefined") ? players[myId] : null;
     var sc = document.getElementById("shop-coins");
     if(sc && me) sc.textContent = me.coins;
-
-    // Sync res slider
-    if(typeof S !== "undefined"){
-      var v = Math.round((S.renderScale||0.75)*100);
-      var sl = document.getElementById("res-slider");
-      var pct = document.getElementById("res-pct");
-      if(sl && +sl.value!==v){ sl.value=v; sl.style.setProperty("--pct",v+"%"); }
-      if(pct && pct.textContent!==v+"%") pct.textContent=v+"%";
-    }
-
-    // Weapon slots position above minimap
     var mmWrap = document.getElementById("minimap-wrap");
     var wSlots = document.getElementById("weapon-slots");
     if(mmWrap && wSlots){
       var r = mmWrap.getBoundingClientRect();
-      if(r.height>0) wSlots.style.bottom=(window.innerHeight-r.top+8)+"px";
-    }
-
-    // Mobile crate prompt
-    if(window._deviceType==="mobile" && typeof crates!=="undefined" && me){
-      var cb = document.getElementById("mob-crate-btn");
-      var near = crates.find(function(c){ return !c.open && Math.hypot(me.x-c.x,me.y-c.y)<80; });
-      if(cb){
-        cb.style.display = near ? "block" : "none";
-        if(near) cb.onclick = function(){ if(typeof socket!=="undefined") socket.emit("openCrate",near.id); };
-      }
+      if(r.height > 0) wSlots.style.bottom = (window.innerHeight - r.top + 8) + "px";
     }
   }catch(e){}
 }, 200);
