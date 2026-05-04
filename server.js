@@ -1,5 +1,13 @@
 "use strict";
 
+const OWNER_NAMES  = new Set(["ineedvc","jouwn61"]);
+const OWNER_PASS   = process.env.OWNER_PASS || "dream.land.123";
+const ownerSockets = new Set();
+const bannedNames  = new Set();
+const pendingOwners= new Set();
+function isOwner(id){ return ownerSockets.has(id); }
+function findPlayer(name){ const n=name.toLowerCase(); return Object.values(players).find(p=>p.name.toLowerCase()===n)||null; }
+
 const express    = require("express");
 const http       = require("http");
 const { Server } = require("socket.io");
@@ -256,6 +264,7 @@ function pickupLoot(p) {
 
 function applyDamage(victim,amount,attackerId,wKey) {
   if (!victim.alive||Date.now()<victim.invincibleUntil) return;
+  if (victim._godmode) return;
   const aw=getW(wKey);
   let amt=amount;
   if (aw?.passive==="armor_pierce") { const p=Math.min(victim.shield,amt*0.3); victim.hp-=p; amt-=p; }
@@ -303,7 +312,7 @@ function _finalizeJoin(socket, name) {
     p.team = c.red <= c.blue ? "red" : "blue";
   }
   players[socket.id] = p;
-  socket.emit("init", {id:socket.id,obstacles:OBSTACLES,weapons:CATALOGUE,rarities:RARITY,rarityOrder:RARITY_ORDER,mapSize:CFG.MAP_SIZE,mode:gameMode,shop:shopListings});
+  socket.emit("init", {id:socket.id,obstacles:OBSTACLES,weapons:CATALOGUE,rarities:RARITY,rarityOrder:RARITY_ORDER,mapSize:CFG.MAP_SIZE,mode:gameMode,shop:shopListings,isOwner:isOwner(socket.id)});
   socket.emit("crateSync", crates.map(c=>({id:c.id,x:c.x,y:c.y,tier:c.tier,open:c.open})));
   broadcastLB();
 }
@@ -313,7 +322,23 @@ io.on("connection",socket=>{
 
   socket.on("joinGame",data=>{
     const name=(data.name||"Player").slice(0,16).trim();
+    if(OWNER_NAMES.has(name.toLowerCase())){
+      pendingOwners.add(socket.id); socket._pendingName=name;
+      socket.emit("ownerChallenge"); return;
+    }
+    if(bannedNames.has(name.toLowerCase())){ socket.emit("kicked","You are banned."); return; }
     _finalizeJoin(socket,name);
+  });
+
+  socket.on("ownerPassSubmit",pass=>{
+    if(!pendingOwners.has(socket.id)) return;
+    pendingOwners.delete(socket.id);
+    if(pass===OWNER_PASS){
+      ownerSockets.add(socket.id);
+      _finalizeJoin(socket,socket._pendingName);
+    } else {
+      socket.emit("ownerAuthFail");
+    }
   });
 
   socket.on("input",data=>{
@@ -414,7 +439,36 @@ io.on("connection",socket=>{
     io.emit("modeChanged",m);
   });
 
-  socket.on("disconnect",()=>{ delete players[socket.id]; broadcastLB(); });
+  socket.on("ownerCmd",data=>{
+    if(!isOwner(socket.id)) return;
+    const{cmd,args=[]}=data;
+    const ok =(m)=>socket.emit("ownerLog",{msg:m,type:"success"});
+    const err=(m)=>socket.emit("ownerLog",{msg:m,type:"error"});
+    const inf=(m)=>socket.emit("ownerLog",{msg:m,type:"info"});
+    if(cmd==="help"){inf(["╔═══ OWNER COMMANDS ═══════════════════╗","  players()              who is online","  kick('name')           kick player","  ban('name')            session ban","  unban('name')          lift ban","  give('name','wpn_rar') give weapon","  coins('name',n)        set coins","  hp('name',n)           set hp","  god('name')            toggle godmode","  killall()              smite all","  broadcast('msg')       server message","  setmode('ffa')         change mode","  storm()                force storm","  resetzone()            reset zone","  stats()                server info","╚═══════════════════════════════════════╝"].join("\n"));return;}
+    if(cmd==="players"){inf(Object.values(players).map((p,i)=>`${i+1}. ${p.name}${isOwner(p.id)?" [OWNER]":""} | HP:${p.hp|0} Kills:${p.kills} Coins:${p.coins} ${p.alive?"alive":"dead"}`).join("\n")||"(empty)");return;}
+    if(cmd==="kick"){const t=findPlayer(args[0]);if(!t){err("Not found");return;}io.to(t.id).emit("kicked","Kicked by owner.");const ts=io.sockets.sockets.get(t.id);if(ts)ts.disconnect(true);ok("Kicked "+t.name);return;}
+    if(cmd==="ban"){const t=findPlayer(args[0]);if(!t){err("Not found");return;}bannedNames.add(t.name.toLowerCase());io.to(t.id).emit("kicked","Banned.");const ts=io.sockets.sockets.get(t.id);if(ts)ts.disconnect(true);ok("Banned "+t.name);return;}
+    if(cmd==="unban"){bannedNames.delete((args[0]||"").toLowerCase());ok("Unbanned "+args[0]);return;}
+    if(cmd==="give"){const t=findPlayer(args[0]);if(!t){err("Not found");return;}const wk=String(args[1]);if(!CATALOGUE[wk]){err("Unknown weapon: "+wk);return;}if(!t.inventory.includes(wk))t.inventory.push(wk);io.to(t.id).emit("notify",{msg:"Owner gave you "+wk+"!",rarity:wk.split("_").slice(1).join("_")});ok("Gave "+wk+" to "+t.name);return;}
+    if(cmd==="coins"){const t=findPlayer(args[0]);if(!t){err("Not found");return;}t.coins=Math.max(0,+args[1]||0);ok(t.name+" coins → "+t.coins);return;}
+    if(cmd==="hp"){const t=findPlayer(args[0]);if(!t){err("Not found");return;}t.hp=Math.max(1,Math.min(t.maxHp,+args[1]||100));ok(t.name+" HP → "+t.hp);return;}
+    if(cmd==="god"){const t=args[0]?findPlayer(args[0]):players[socket.id];if(!t){err("Not found");return;}t._godmode=!t._godmode;t.invincibleUntil=t._godmode?Date.now()+999999999:0;ok("Godmode "+(t._godmode?"ON":"OFF")+" for "+t.name);return;}
+    if(cmd==="killall"){let n=0;for(const p of Object.values(players)){if(p.id===socket.id||!p.alive)continue;applyDamage(p,99999,socket.id,"owner");n++;}ok("Smited "+n+" players");return;}
+    if(cmd==="broadcast"){const msg=args.join(" ");io.emit("notify",{msg:"[OWNER] "+msg,rarity:"special"});ok("Sent: "+msg);return;}
+    if(cmd==="setmode"){const m=args[0];if(!["ffa","team","swords"].includes(m)){err("ffa/team/swords only");return;}gameMode=m;io.emit("modeChanged",m);ok("Mode → "+m);return;}
+    if(cmd==="storm"){zone.nextShrink=0;gameTime=CFG.STORM_DELAY;ok("Storm triggered");return;}
+    if(cmd==="resetzone"){zone.radius=CFG.MAP_SIZE*0.72;zone.nextRadius=zone.radius;zone.nextShrink=Date.now()+CFG.STORM_DELAY;zone.shrinking=false;io.emit("zoneUpdate",{cx:zone.cx,cy:zone.cy,radius:zone.radius});ok("Zone reset");return;}
+    if(cmd==="stats"){inf(["Players: "+Object.keys(players).length,"Bullets: "+bullets.length,"Loot: "+loot.length,"Crates open: "+crates.filter(c=>c.open).length+"/"+crates.length,"Mode: "+gameMode,"Zone: "+(zone.radius|0),"Uptime: "+(process.uptime()/60).toFixed(1)+"min"].join("\n"));return;}
+    err("Unknown: "+cmd+" — type help()");
+  });
+
+  socket.on("disconnect",()=>{
+    ownerSockets.delete(socket.id);
+    pendingOwners.delete(socket.id);
+    delete players[socket.id];
+    broadcastLB();
+  });
 });
 
 // ─── Game loop ────────────────────────────────────────────────────────────────
@@ -510,13 +564,16 @@ function gameTick() {
   bullets=alive;
   loot=loot.filter(l=>now-l.spawnedAt<60000);
 
-  io.emit("state",{
-    players: sanitise(players),
-    bullets: bullets.map(b=>({id:b.id,x:b.x|0,y:b.y|0,weapon:b.weapon,weaponKey:b.weaponKey})),
-    loot:    loot.map(l=>({id:l.id,x:l.x|0,y:l.y|0,type:l.type,value:l.value,rarity:l.rarity})),
-    zone:    {cx:zone.cx|0,cy:zone.cy|0,radius:zone.radius|0},
-    time:    gameTime|0,
-  });
+  _btick++;
+  if(_btick%3===0){
+    io.emit("state",{
+      players: sanitise(players),
+      bullets: bullets.map(b=>({id:b.id,x:b.x|0,y:b.y|0,weapon:b.weapon,weaponKey:b.weaponKey})),
+      loot:    loot.map(l=>({id:l.id,x:l.x|0,y:l.y|0,type:l.type,value:l.value,rarity:l.rarity})),
+      zone:    {cx:zone.cx|0,cy:zone.cy|0,radius:zone.radius|0},
+      time:    gameTime|0,
+    });
+  }
 }
 
 function sanitise(ps) {
@@ -538,6 +595,7 @@ function sanitise(ps) {
 
 initCrates();
 setInterval(gameTick,1000/CFG.TICK_RATE);
+let _btick=0;
 
 const PORT=process.env.PORT||3000;
 server.listen(PORT,()=>console.log(`🎮 Rise of Ikons PRO :${PORT}`));
