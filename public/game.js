@@ -109,6 +109,7 @@ window.startGame=function(){
 
 // ─── Socket events ────────────────────────────────────────────────────────────
 socket.on("init",data=>{
+  if(data.isOwner){isOwner=true;const oc=document.getElementById("owner-console");if(oc)oc.style.display="flex";}
   myId=data.id; obstacles=data.obstacles||[]; weapons=data.weapons||{};
   rarities=data.rarities||{}; rarityOrder=data.rarityOrder||Object.keys(RARITY_COLORS);
   mapSize=data.mapSize||6000; gameMode=data.mode||"ffa";
@@ -181,6 +182,16 @@ socket.on("died",d=>{
 });
 socket.on("respawned",d=>{myPos.x=d.x;myPos.y=d.y;myVel.x=0;myVel.y=0;deathScreen.style.display="none";reloading=false;reloadWrap.style.display="none";});
 socket.on("notify",d=>{const msg=typeof d==="string"?d:d.msg;showNotify(msg,typeof d==="string"?null:d.rarity);});
+
+let isOwner=false;
+socket.on("ownerChallenge",()=>{
+  const pass=prompt("Owner login - Enter password:");
+  if(pass===null){location.reload();return;}
+  socket.emit("ownerPassSubmit",pass);
+});
+socket.on("ownerAuthFail",()=>{alert("Wrong password.");location.reload();});
+socket.on("kicked",msg=>{alert(msg||"You were removed.");location.reload();});
+socket.on("ownerLog",d=>appendOwnerLog(d.msg,d.type||"info"));
 
 
 
@@ -415,6 +426,7 @@ window.toggleSettings=function(){settingsOpen=!settingsOpen;if(settingsOpen)buil
 // ─── Input ────────────────────────────────────────────────────────────────────
 document.addEventListener("keydown",e=>{
   keys[e.key.toLowerCase()]=true;
+  if(window._ownerTyping)return;
   if(window._ownerTyping) return; // don't process game keys while in console
   if(!gameActive)return;
   if(e.key==="Tab"){e.preventDefault();lbEl.style.display="block";return;}
@@ -877,6 +889,28 @@ function loop(now){
   if(me?.inventory){const k=me.inventory.join(",");if(k!==_lastInvKey){_lastInvKey=k;buildWeaponSlots();updatePassiveHud();}}
 }
 
+
+// ── Owner console ─────────────────────────────────────────────────────────────
+function appendOwnerLog(msg,type){
+  const log=document.getElementById("owner-log");if(!log)return;
+  const colors={info:"#60a5fa",success:"#4ade80",error:"#ef4444",warn:"#facc15"};
+  const div=document.createElement("div");
+  div.style.cssText="color:"+(colors[type]||"#f1f5f9")+";font-size:12px;line-height:1.5;white-space:pre-wrap;margin-bottom:2px";
+  div.textContent="> "+msg;log.appendChild(div);log.scrollTop=log.scrollHeight;
+}
+function ownerExec(input){
+  if(!isOwner||!input.trim())return;
+  appendOwnerLog(input,"warn");
+  const match=input.match(/^(\w+)\((.*)\)\s*$/s);
+  if(!match){appendOwnerLog("Format: command('arg1',arg2)","error");return;}
+  const cmd=match[1].toLowerCase();
+  const rawArgs=match[2].trim();
+  const args=rawArgs?rawArgs.split(",").map(a=>{const t=a.trim().replace(/^['"]|['"]$/g,"");return isNaN(t)?t:+t;}):[];
+  socket.emit("ownerCmd",{cmd,args});
+}
+window.owner={};
+["help","players","kick","ban","unban","give","coins","hp","god","killall","broadcast","setmode","storm","resetzone","stats"]
+  .forEach(c=>{window.owner[c]=(...a)=>ownerExec(c+"("+a.map(x=>JSON.stringify(x)).join(",")+")");});
 
 applyAllSettings();
 _rafId=requestAnimationFrame(loop);
