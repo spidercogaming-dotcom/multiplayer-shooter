@@ -143,6 +143,23 @@ canvas{display:block;cursor:crosshair;position:absolute;inset:0}
 .settings-reset:hover{background:rgba(239,68,68,.08)}
 #settings-body::-webkit-scrollbar{width:4px}
 #settings-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+
+/* ── OWNER CONSOLE ── */
+#owner-console{position:absolute;bottom:16px;right:16px;width:420px;max-height:320px;background:rgba(5,10,20,.97);border:1px solid rgba(250,204,21,.35);border-radius:10px;display:none;flex-direction:column;z-index:200;overflow:hidden;font-family:var(--mono);box-shadow:0 0 30px rgba(250,204,21,.08)}
+#owner-console-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(250,204,21,.2);background:rgba(250,204,21,.06);flex-shrink:0}
+#owner-console-title{font-size:11px;font-weight:700;color:#facc15;letter-spacing:2px}
+#owner-console-btns{display:flex;gap:6px}
+.oc-btn{background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:4px;color:#94a3b8;font-family:var(--mono);font-size:10px;padding:3px 8px;cursor:pointer}
+.oc-btn:hover{color:#f1f5f9}
+#owner-log{flex:1;overflow-y:auto;padding:8px 12px;min-height:80px;max-height:200px}
+#owner-log::-webkit-scrollbar{width:3px}
+#owner-log::-webkit-scrollbar-thumb{background:rgba(250,204,21,.3);border-radius:2px}
+#owner-input-row{display:flex;border-top:1px solid rgba(250,204,21,.15);flex-shrink:0}
+#owner-input{flex:1;background:transparent;border:none;outline:none;color:#f1f5f9;font-family:var(--mono);font-size:12px;padding:8px 12px}
+#owner-input::placeholder{color:#475569}
+#owner-send{background:transparent;border:none;border-left:1px solid rgba(250,204,21,.15);color:#facc15;font-family:var(--mono);font-size:12px;padding:8px 14px;cursor:pointer}
+#owner-send:hover{background:rgba(250,204,21,.08)}
+#owner-tab{position:absolute;bottom:16px;right:16px;background:rgba(5,10,20,.92);border:1px solid rgba(250,204,21,.4);border-radius:6px;padding:7px 14px;font-family:var(--mono);font-size:11px;color:#facc15;cursor:pointer;display:none;z-index:200;letter-spacing:1px}
 </style>
 </head>
 <body>
@@ -247,9 +264,38 @@ canvas{display:block;cursor:crosshair;position:absolute;inset:0}
   <div id="settings-body"></div>
 </div>
 
+<!-- OWNER CONSOLE -->
+<div id="owner-console">
+  <div id="owner-console-header">
+    <div id="owner-console-title">⚡ OWNER CONSOLE</div>
+    <div id="owner-console-btns">
+      <button class="oc-btn" onclick="ownerExec('help()')">HELP</button>
+      <button class="oc-btn" onclick="ownerExec('players()')">WHO</button>
+      <button class="oc-btn" onclick="ownerExec('stats()')">STATS</button>
+      <button class="oc-btn" onclick="document.getElementById('owner-console').style.display='none';document.getElementById('owner-tab').style.display='block'">—</button>
+    </div>
+  </div>
+  <div id="owner-log"><div style="color:#facc15;font-size:12px">⚡ Owner console ready. Type help() for commands.</div></div>
+  <div id="owner-input-row">
+    <input id="owner-input" placeholder="e.g. kick('name') or help()" autocomplete="off" spellcheck="false"/>
+    <button id="owner-send">RUN</button>
+  </div>
+</div>
+<div id="owner-tab" onclick="document.getElementById('owner-console').style.display='flex';this.style.display='none'">⚡ CONSOLE</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 <script>
+(function(){
+  const inp=document.getElementById("owner-input");
+  const btn=document.getElementById("owner-send");
+  if(!inp||!btn)return;
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();if(typeof ownerExec==="function")ownerExec(inp.value);inp.value="";}});
+  btn.addEventListener("click",function(){if(typeof ownerExec==="function")ownerExec(inp.value);inp.value="";});
+  inp.addEventListener("focus",function(){window._ownerTyping=true;});
+  inp.addEventListener("blur",function(){window._ownerTyping=false;});
+})();
+
 setInterval(function(){
   try{
     var me = (typeof players!=="undefined"&&typeof myId!=="undefined") ? players[myId] : null;
